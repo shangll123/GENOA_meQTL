@@ -1,5 +1,391 @@
 
-#### molocalization and colocalization
+#### Prepare data for moloc and coloc
+```R
+############
+# SBP:
+############
+load("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v2/GWAS/SBP_summary.RData")
+SBP_summary$z = SBP_summary$Effect/SBP_summary$StdErr
+# > SBP_summary[1,]
+#           ID Chr   pos Allele1 Allele2  Freq1  Effect StdErr P.value
+# 1 rs58108140   1 10583       A       G 0.0747 -0.8143 1.2736  0.5226
+#   TotalSampleSize          z
+# 1         4797.64 -0.6393687
+
+for(chr in 1:22){
+	print(chr)
+	SBP_trait_chr = SBP_summary[which(SBP_summary$Chr==chr),]
+	save(SBP_trait_chr, file = paste0("./data/SBP_trait_chr_",chr,".RData"))
+}
+
+
+############
+# BMI:
+############
+load("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v2/GWAS/BMI_summary.RData")
+BMI_trait = data.frame("ID"=BMI_summary$SNP)
+BMI_trait$Chr=BMI_summary$CHR
+BMI_trait$pos=BMI_summary$POS
+BMI_trait$Allele1=BMI_summary$Allele1
+BMI_trait$Allele2=BMI_summary$Allele2
+BMI_trait$Freq1=BMI_summary$Freq1
+BMI_trait$Effect=BMI_summary$Effect
+BMI_trait$StdErr=BMI_summary$StdErr
+BMI_trait$P.value=BMI_summary$P.value
+BMI_trait$TotalSampleSize=BMI_summary$TotalSampleSize
+BMI_trait$z=BMI_trait$Effect/BMI_trait$StdErr
+
+for(chr in 1:22){
+	print(chr)
+	BMI_trait_chr = BMI_trait[which(BMI_trait$Chr==chr),]
+	save(BMI_trait_chr, file = paste0("./data/BMI_trait_chr_",chr,".RData"))
+}
+
+
+
+# https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5419579/pdf/pgen.1006719.pdf
+
+############
+# DBP
+############
+
+#cp /home/skardia_lab/clubhouse/research/projects/GENOA_AA_GRS/GWAS_Papers/BP_AA/COGENT_DBP.results.metal.txt.gz /home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v2/GWAS/COGENT_DBP.results.metal.txt.gz
+DBP=read.table(gzfile("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v2/GWAS/COGENT_DBP.results.metal.txt.gz"),sep=" ",header=T)
+
+# > dim(DBP)
+# [1] 20865177       16
+# > DBP[1,]
+#           ID Chr   pos Allele1 Allele2  Freq1 FreqSE  Effect StdErr P.value
+# 1 rs58108140   1 10583       a       g 0.0751 0.0047 -0.2495 0.7688  0.7456
+#               Direction HetISq HetChiSq HetDf HetPVal TotalSampleSize
+# 1 ???????-???+????????+   18.2    2.444     2  0.2947         4797.64
+DBP$FreqSE = NULL
+DBP$Direction = NULL
+DBP$HetISq = NULL
+DBP$HetChiSq = NULL
+DBP$HetDf = NULL
+DBP$HetPVal = NULL
+DBP$z=DBP$Effect/DBP$StdErr
+
+for(chr in 1:22){
+	print(chr)
+	DBP_trait_chr = DBP[which(DBP$Chr==chr),]
+	save(DBP_trait_chr, file = paste0("./data/DBP_trait_chr_",chr,".RData"))
+}
+
+
+for(chr in 1:22){
+	print(chr)
+	load(paste0("./data/DBP_trait_chr_",chr,".RData"))
+	DBP_trait_chr$Allele1 = toupper(DBP_trait_chr$Allele1)
+	DBP_trait_chr$Allele2 = toupper(DBP_trait_chr$Allele2)
+	save(DBP_trait_chr, file = paste0("./data/DBP_trait_chr_",chr,".RData"))
+}
+
+
+
+
+############
+#HTN
+############
+
+# cp /home/skardia_lab/clubhouse/research/projects/GENOA_AA_GRS/GWAS_Papers/BP_AA/COGENT_HTN.results.metal.txt.gz /home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v2/GWAS/COGENT_HTN.results.metal.txt.gz
+HTN=read.table(gzfile("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v2/GWAS/COGENT_HTN.results.metal.txt.gz"),sep=" ",header=T)
+
+HTN$FreqSE = NULL
+HTN$Direction = NULL
+HTN$HetISq = NULL
+HTN$HetChiSq = NULL
+HTN$HetDf = NULL
+HTN$HetPVal = NULL
+HTN$z=HTN$Effect/HTN$StdErr
+
+for(chr in 1:22){
+	print(chr)
+	HTN_trait_chr = HTN[which(HTN$Chr==chr),]
+	save(HTN_trait_chr, file = paste0("./data/HTN_trait_chr_",chr,".RData"))
+}
+
+for(chr in 1:22){
+	print(chr)
+	load(paste0("./data/HTN_trait_chr_",chr,".RData"))
+	HTN_trait_chr$Allele1 = toupper(HTN_trait_chr$Allele1)
+	HTN_trait_chr$Allele2 = toupper(HTN_trait_chr$Allele2)
+	save(HTN_trait_chr, file = paste0("./data/HTN_trait_chr_",chr,".RData"))
+}
+
+
+############
+# PP
+############
+
+#cp /home/skardia_lab/clubhouse/research/projects/GENOA_AA_GRS/GWAS_Papers/BP_AA/COGENT_PP.results.metal.txt.gz /home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v2/GWAS/COGENT_PP.results.metal.txt.gz
+
+PP = read.table(gzfile("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v2/GWAS/COGENT_PP.results.metal.txt.gz"),sep=" ",header=T)
+
+PP$FreqSE = NULL
+PP$Direction = NULL
+PP$HetISq = NULL
+PP$HetChiSq = NULL
+PP$HetDf = NULL
+PP$HetPVal = NULL
+PP$z=PP$Effect/PP$StdErr
+
+for(chr in 1:22){
+	print(chr)
+	PP_trait_chr = PP[which(PP$Chr==chr),]
+	save(PP_trait_chr, file = paste0("./data/PP_trait_chr_",chr,".RData"))
+}
+
+
+for(chr in 1:22){
+	print(chr)
+	load(paste0("./data/PP_trait_chr_",chr,".RData"))
+	PP_trait_chr$Allele1 = toupper(PP_trait_chr$Allele1)
+	PP_trait_chr$Allele2 = toupper(PP_trait_chr$Allele2)
+	save(PP_trait_chr, file = paste0("./data/PP_trait_chr_",chr,".RData"))
+}
+
+
+
+# > PP[1,]
+#           ID Chr   pos Allele1 Allele2 Freq1  Effect StdErr P.value
+# 1 rs58108140   1 10583       a       g 0.075 -0.2943 0.8994  0.7435
+#   TotalSampleSize          z
+# 1         4797.64 -0.3272181
+
+############
+# T2D
+############
+
+# https://storage.googleapis.com/plos-corpus-prod/10.1371/journal.pgen.1004517/1/pgen.1004517.pdf?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=wombat-sa%40plos-prod.iam.gserviceaccount.com%2F20211102%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20211102T030452Z&X-Goog-Expires=86400&X-Goog-SignedHeaders=host&X-Goog-Signature=723495f5f78a1104c7ed0a1bcced85816905c024f9d0175df5b4b0e1b5f4a92c3225cb1656b8104b9cc780cd74813f06b8c070c6b84f7616808f59dd0f9d782a1be9857e622d5500f6d7203ed6b863bd5b96b60f3584d68d83da8a45657f86132d79ec930dcaa910eb810b1a48fbff487d20b7b9043817b8ecfdb5f03fdc314ae151e0884b7a9df9e5ec92b1ac95eaa9917e69f0edebd041f7ede67a906ff95f324d30fd059d6d2522c3ce0648201e68ea1cca827cdf4e1c84738b75aa9f5a034c7857e58155ab497ae6e75c288a1a3279900ba8d111fff5f19ad504c5f860be7e6ad322827b8cf3daf611d33d9ae5c645c9dfd9aff8d0b7ffa305facf1a706a
+# Meta-Analysis of Genome-Wide Association Studies in African Americans Provides Insights into the Genetic Architecture of Type 2 Diabetes
+
+T2D = read.table("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v2/GWAS/MEDIA_HapMap_T2D_baseline.txt", header=T)
+T2D_summary = T2D[,c(1,2,3,4,5,6,10,11,12,17)]
+T2D_summary$SNP = as.character(T2D_summary$SNP)
+T2D_summary$Allele1 = toupper(T2D_summary$Allele1)
+T2D_summary$Allele2 = toupper(T2D_summary$Allele2)
+dim(T2D_summary)
+
+
+
+T2D_trait = data.frame("ID"=T2D_summary$SNP)
+T2D_trait$Chr=T2D_summary$chr
+T2D_trait$pos=T2D_summary$position
+T2D_trait$Allele1=T2D_summary$Allele1
+T2D_trait$Allele2=T2D_summary$Allele2
+T2D_trait$Freq1=T2D_summary$A1_freq
+T2D_trait$Effect=T2D_summary$Effect
+T2D_trait$StdErr=T2D_summary$StdErr
+T2D_trait$P.value=T2D_summary$P_value
+T2D_trait$TotalSampleSize=T2D_summary$N
+T2D_trait$z=T2D_trait$Effect/T2D_trait$StdErr
+
+
+for(chr in 1:22){
+	print(chr)
+	T2D_trait_chr = T2D_trait[which(T2D_trait$Chr==chr),]
+	save(T2D_trait_chr, file = paste0("./data/T2D_trait_chr_",chr,".RData"))
+}
+
+
+##########################################################
+# prepare for colocalization analysis data
+##########################################################
+
+path_mQTL = "/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu"
+path_eQTL = "/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/coloc"
+path_analysis = "/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/analysis"
+path_mediation = "/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/mediation"
+load("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v2/annodata.RData")
+load("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/coloc/CpG_gene_table.RData")
+library(plyr)
+library(dplyr)
+#load("/net/mulan/home/shanglu/GENOA/data/AA/gene_AA_anno_order_correct.RData")
+load("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/coloc/gene_AA_anno_order_correct.RData")
+load("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/coloc/CpG_gene_table.RData")
+
+
+thr_mQTL = 0.0002267195
+thr_eQTL = 6.245907e-05
+leadeSNP = gene_AA_anno_order[which(gene_AA_anno_order$eGene==1),]
+leadeSNP$gene = as.character(leadeSNP$gene)
+
+# use upper or lower 100kb
+count_eQTL_SNPnum = c()
+count_mQTL_SNPnum = c()
+count_gene_CpG_pairs = c()
+# use upper or lower 100kb
+dat = list()
+count = 0
+count_gene_CpG_pairs = c()
+
+for(chr in 1:22){
+  print("chromosome")
+  print(chr)
+  print("loading data!")
+  BFILE=paste0("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/mQTL_leadSNPgeno/chr_",chr,"_leadeSNP")
+  load(paste0(BFILE,"_geno_scale.RData"))
+  BFILE=paste0("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/mQTL_leadSNPgeno/chr_",chr,"_leadmSNP")
+  load(paste0(BFILE,"_geno_scale.RData"))
+
+  leadeSNP_subchr = leadeSNP[which(leadeSNP$chr==chr),]
+  load(paste0(path_eQTL,"/AA_full_table_chr_",chr,".RData"))
+  load(paste0(path_analysis,"/dfcpg_chr_",chr,".RData"))
+  load(paste0(path_analysis,"/df_top_chr_",chr,".RData"))
+  
+
+  mQTL_table = dfcpg_chr[which(dfcpg_chr$significant==1),] # need to use all matched signals, but here need to use this to get lead mSNP
+  print("data ready!")
+
+  for(ith in 1:dim(leadeSNP_subchr)[1]){
+
+    leadeSNP_rs = leadeSNP_subchr[ith,]$topSNP_rs
+    leadeSNP_chr = leadeSNP_subchr[ith,]$chr
+    leadeSNP_pos = leadeSNP_subchr[ith,]$topSNP_ps
+    leadeSNP_gene = leadeSNP_subchr[ith,]$gene
+
+    # extract genotype of lead eQTL SNP
+    leadeSNP_rs_genotype = geno_leadeSNP[,which(colnames(geno_leadeSNP) ==leadeSNP_rs )]
+    # leadeSNP_GeneMatchedCpg = CpG_gene_table$allCpG_vec[which(CpG_gene_table$allgenes_vec %in% leadeSNP_gene)]
+    print("ready to match!")
+    # find all CpGs linked to the lead eSNP
+    leadeSNP_rs_linked_CpG = unique(as.character(mQTL_table$cpg[which(mQTL_table$rs == leadeSNP_rs)]))
+	# in CpGs linked to the lead eSNP, find out their lead mSNP
+    leadeSNP_matchedCpg_leadmSNP = as.character(df_top_chr$rs)[match(leadeSNP_rs_linked_CpG, as.character(df_top_chr$cpg))]
+    # make dictionary table, each CpG -- its leadmSNP
+    dat_tmp = data.frame(leadeSNP_rs_linked_CpG, leadeSNP_matchedCpg_leadmSNP)
+    # delete NA rows
+    dat_tmp = na.omit(dat_tmp)
+
+    if(dim(dat_tmp)[1]>=1){
+
+	count = count + 1
+ 	print(count)
+ 	# look into each row in dictionary table, each CpG -- its leadmSNP
+ 	# calculate R2
+    cor = c()
+    for(cpgth in 1:dim(dat_tmp)[1]){
+    	leadmSNP_genotype = geno_leadmSNP[,which(colnames(geno_leadmSNP) %in%  as.character(dat_tmp$leadeSNP_matchedCpg_leadmSNP[cpgth]))]
+    	cor[cpgth] = abs(cor.test(leadeSNP_rs_genotype, leadmSNP_genotype)$estimate)
+    }
+    dat_tmp$R = cor
+    dat_tmp$R2 = cor^2
+    # now eGene and mCPG have fixed
+    eGene = leadeSNP_subchr[ith,]$GENE
+    mCPG = as.character(dat_tmp$leadeSNP_rs_linked_CpG[which.max(dat_tmp$R2)])  # it should be leadeSNP_rs_linked_CpG here
+    # find SNPs in the region +/- 100kb of lead eSNP
+    lowerpos = leadeSNP_pos-100000
+    upperpos = leadeSNP_pos+100000
+    # in eQTL, find this eGene and SNP pairs that are within 100kb of lead eSNP
+    eQTL_prep0 = AA_full_table[which(AA_full_table$GENE==eGene),]
+    eQTL_prep1 = eQTL_prep0[which(eQTL_prep0$ps >=lowerpos & eQTL_prep0$ps <= upperpos),]
+    # in mQTL, fix mCPG, find pairs with SNPs filtered above
+    mQTL_prep0 = dfcpg_chr[which(dfcpg_chr$cpg == mCPG),]
+    mQTL_prep1 = mQTL_prep0[which(mQTL_prep0$rs %in% eQTL_prep1$rs),]
+    # match SNPs
+    matched_SNP = mQTL_prep1$rs
+    eQTL_prep = eQTL_prep1[match(matched_SNP,eQTL_prep1$rs ),]
+    mQTL_prep = mQTL_prep1[match(matched_SNP,mQTL_prep1$rs ),]
+    colnames(eQTL_prep) = c( "chr_eQTL" ,"rs_eQTL" , "ps_eQTL" , "n_miss_eQTL" , "allele1_eQTL", "allele0_eQTL", "af_eQTL","beta_eQTL"  ,  "se_eQTL"   ,   "l_remle_eQTL", "p_wald_eQTL" , "GENE_eQTL"   )
+    colnames(mQTL_prep) = c( "chr_mQTL" ,"rs_mQTL" , "ps_mQTL" ,  "allele1_mQTL", "allele0_mQTL", "af_mQTL","beta_mQTL"  ,  "se_mQTL"   ,  "p_wald_mQTL" , "cpg_mQTL" ,"cpgstart"  ,  "cpgend"   ,   "significant_mQTL"  )
+
+    dat[[count]] = list()
+    dat[[count]]$coloc_input = cbind(eQTL_prep,mQTL_prep)
+    dat[[count]]$eGene = c(eGene, leadeSNP_gene)
+    dat[[count]]$eSNP = leadeSNP_rs
+    dat[[count]]$chr = leadeSNP_chr
+    dat[[count]]$eSNP_pos = leadeSNP_pos
+    dat[[count]]$mCPG = mCPG
+    dat[[count]]$SNPnum = dim(dat[[count]]$coloc_input)[1]
+    dat[[count]]$genotype = geno_leadeSNP
+
+    datt = dat[[count]]
+    save(datt, file = paste0("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v2/coloc_moloc/data/mcoloc_prepare_dat_",count,".RData"))
+      print("match!")
+    }
+  }
+}
+
+
+# remove pairs with 0 SNPs
+coloc_dat = list()
+ind = 0
+for(count in 1:length(dat)){
+	if(dim(dat[[count]]$coloc_input)[1]>0){
+		ind=ind+1
+		coloc_dat[[ind]] = dat[[count]]
+	}
+}
+
+##########################################################
+# extract genotype
+##########################################################
+
+snp_names_by_chr= list()
+#initialize
+for(chr in 1:22){
+	snp_names_by_chr[[chr]]=NA
+}
+
+chr_index = c()
+for(count in 1:length(coloc_dat)){
+	print(count)
+	load(paste0("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v2/coloc_moloc/data/mcoloc_prepare_dat_",count,".RData"))
+    snpname= as.character(datt$coloc_input$rs_eQTL)
+    chr_index = datt$coloc_input$chr_eQTL[1]
+    write.table(snpname, paste0("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v2/coloc_moloc/data/All_snpnames_of_gene",count,".txt"),col.names=F, row.names=F, quote=F)
+	write.table(chr_index, paste0("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v2/coloc_moloc/data/All_snpnames_of_gene_",count,"_index.txt"),col.names=F, row.names=F, quote=F)
+}
+
+# need to use plink to extract all lead mSNPs with their geno file
+pathgeno=/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v2/coloc_moloc
+cd /home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v2/coloc_moloc
+
+# extract lean eSNP
+for ((i=1;i<=length(coloc_dat);i++)); do
+echo $i
+gnum=`cat /home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v2/coloc_moloc/data/All_snpnames_of_gene_${i}_index.txt`
+Gfile=/home/skardia_lab/clubhouse/research/projects/GENOA_AA_GE/preprocessing_zxu_March2017/Lulu_Mar2018/VCFtoBED/chr_${gnum}
+plink2 --bfile ${Gfile} --keep PIN_keep1032.txt --extract All_snpnames_of_gene${i}.txt --make-bed --out gene_${i}_geno
+done
+
+
+# read into R and make R data
+library(snpStats )
+for(i in 1:length(coloc_dat)){
+
+	print(i)
+	load(paste0("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v2/coloc_moloc/data/mcoloc_prepare_dat_",i,".RData"))
+ 
+	BFILE=paste0("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v2/coloc_moloc/data/gene_",i,"_geno")
+	fam <- paste0(BFILE,".fam")
+	bim <- paste0(BFILE,".bim")
+	bed <- paste0(BFILE,".bed")
+	m = read.plink(bed, bim, fam)
+	write.SnpMatrix(m$genotypes, paste0(BFILE,"_Bfile.txt"),quote=F,col.names = F,row.names = F)
+	snp_names = as.character(read.table(bim)$V2)
+	a = read.table(paste0(BFILE,"_Bfile.txt"),header=F)
+	a=2-a
+  	for(k in 1:ncol(a)){
+	    a[is.na(a[,k]), k] <- mean(a[,k], na.rm = TRUE)
+	    a[is.na(a[,k]), k] <- mean(a[,k], na.rm = TRUE)
+	 }
+	geno = scale(a)
+	colnames(geno) = snp_names
+	datt$geno=geno
+	save(datt, file = paste0("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v2/coloc_moloc/data/mcoloc_prepare_dat_",i,".RData"))
+
+}
+
+
+
+```
+
+
+
+#### run molocalization and colocalization
 
 ```R
 
