@@ -67,13 +67,9 @@ for(chr in 1:22){
   }
 }
 
-#------------
+#---------------------
 # compare with FHS
-#------------
-
-#-------------------------------
-# compare with FHS
-#-------------------------------
+#---------------------
 
 AA_thr = 2.267195e-4
 FHS_thr = 2e-11
@@ -113,7 +109,7 @@ sum(FHS_pairs_num_50kb)
 
 
 #---------------------
-# cooccurring paper
+# compare with BEST
 # https://datadryad.org/stash/dataset/doi:10.5061/dryad.hq68q
 #---------------------
 library(purrr)
