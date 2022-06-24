@@ -1,0 +1,807 @@
+
+```R
+# create annotation meta data, to prepare with later data analysis 
+annodata_meta = annodata 
+for(i in 1:22){
+	print(i)
+	load(paste0(path_analysis,"/df_top_chr_",i,".RData"))
+	cpg_matched = intersect(df_top_chr$cpg, annodata_meta$cpg)
+	cpg_rs = df_top_chr[match(cpg_matched, df_top_chr$cpg),]$rs
+	cpg_pos = df_top_chr[match(cpg_matched, df_top_chr$cpg),]$ps
+	index = match(cpg_matched, annodata_meta$cpg)
+	annodata_meta[index,]$rs = cpg_rs
+	# check_pos = annodata_meta[index,]$ps
+}
+
+```
+
+
+```bash
+
+=====================================================================================
+# mQTL_conditioanl_main.sh
+=====================================================================================
+
+#!/bin/bash -l
+
+#$ -N GEMMA
+#$ -j y
+
+echo $FOO 
+echo $SGE_TASK_ID
+mylines=$FOO
+pathchunk=/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/data/chunk
+pathconditional=/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/data/conditional
+pathlulu=/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu
+path_relatedness=/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/data/genotype/AA/relatedness/output
+pathcode=/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/code
+i=$(awk -v mylines=$mylines 'NR==mylines {print $1}'  ${pathchunk}/dictionary.txt)
+j=$(awk -v mylines=$mylines 'NR==mylines {print $2}'  ${pathchunk}/dictionary.txt)
+num=$(awk -v mylines=$mylines 'NR==mylines {print $3}'  ${pathchunk}/dictionary.txt)
+echo $i
+echo $j
+echo $num
+
+mkdir ${pathconditional}/output/chr_${i}_chunk_${j}
+GPATH=${pathconditional}/output/chr_${i}_chunk_${j}
+mkdir ${pathconditional}/chr_${i}_chunk_${j}
+cpginfo=${pathchunk}/cpg_map_chr_${i}_chunk_${j}.txt
+Gfile=${pathlulu}/data/genotype/AA/mQTL_chr_${i}
+
+for ((line=1;line<=num;line++)); do
+echo $line
+cd ${pathconditional}/chr_${i}_chunk_${j}
+cpgname=$(awk -v line=$line 'NR==line {print $1}'  $cpginfo)
+snpname=${pathlulu}/data/genotype/AA/chr_${i}/chr_${i}_${cpgname}.snpname
+plink --noweb --bfile ${Gfile}  --extract ${snpname} --remove ${pathchunk}/J124135.txt --make-bed --out ${cpgname}
+rm *.log
+rm *.nosex
+R CMD BATCH --slave "--args ${i} ${j} ${line}" ${pathcode}/write_fam.R  ${pathcode}/write_fam_ConditionalAnalysis.out
+mkdir ${pathconditional}/output/chr_${i}_chunk_${j}/chr_${i}_chunk_${j}_line_${line}
+tmp=1
+cd ${pathconditional}
+for iter in `seq 1 20`
+do
+pre_iter="$(($iter-$tmp))"
+R CMD BATCH --slave "--args ${i} ${j} ${line} ${pre_iter}" ${pathcode}/write_rs_list_AA_meQTL.r  ${GPATH}/chr_${i}_chunk_${j}_line_${line}/write_rs_list_AA_meQTL_chr${i}_chunk${j}_line${pre_iter}.out
+pval01=`cat ${GPATH}/chr_${i}_chunk_${j}_line_${line}/pval_01_iter${pre_iter}.txt`
+echo ${pval01}
+if [ ! -f ${GPATH}/chr_${i}_chunk_${j}_line_${line}/pval_iter0.txt ]; then
+echo "File not found!"
+break 1
+fi
+if [ "$pval01" == "$tmp" ]; then
+break 1
+else
+BFILE=${pathconditional}/chr_${i}_chunk_${j}/${cpgname}
+plink --noweb --bfile ${BFILE} --recode --extract ${GPATH}/chr_${i}_chunk_${j}_line_${line}/snps${iter}.txt --make-bed --out ${GPATH}/chr_${i}_chunk_${j}_line_${line}/gwas_file_text_test${iter}
+R CMD BATCH --slave "--args ${i} ${j} ${line} ${iter}" ${pathcode}/read_bed_AA_meQTL.r  ${GPATH}/chr_${i}_chunk_${j}_line_${line}/read_bed_AA${iter}.out
+echo ${iter}
+gemma -bfile ${BFILE} -maf 0.01 -r2 0.999999 -n 1 -k ${path_relatedness}/related.txt -lmm 1 -c ${GPATH}/chr_${i}_chunk_${j}_line_${line}/covariate_iter${iter}.txt -o /chr_${i}_chunk_${j}/chr_${i}_chunk_${j}_line_${line}/chr_${i}_chunk_${j}_line_${line}_covariate${iter}
+fi
+iter="$(($iter+$tmp))"
+done
+done
+
+=====================================================================================
+# read_bed_AA_meQTL.r
+=====================================================================================
+
+args <- as.numeric(commandArgs(TRUE))
+
+i = args[1]
+j = args[2]
+line=args[3]
+iter = args[4]
+print(iter)
+
+path_cond = "/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/data/conditional"
+library(snpStats)
+fam <- paste0(path_cond,"/output/chr_",i,"_chunk_",j,"/chr_",i,"_chunk_",j,"_line_",line,"/gwas_file_text_test",iter,".fam")
+bim <- paste0(path_cond,"/output/chr_",i,"_chunk_",j,"/chr_",i,"_chunk_",j,"_line_",line,"/gwas_file_text_test",iter,".bim")
+bed <- paste0(path_cond,"/output/chr_",i,"_chunk_",j,"/chr_",i,"_chunk_",j,"_line_",line,"/gwas_file_text_test",iter,".bed")
+m = read.plink(bed, bim, fam)
+ 
+write.SnpMatrix(m$genotypes, paste0(path_cond,"/output/chr_",i,"_chunk_",j,"/chr_",i,"_chunk_",j,"_line_",line,"/SnpMatrix",iter,".txt"),quote=F,col.names = F,row.names = F)
+
+a = read.table(paste0(path_cond,"/output/chr_",i,"_chunk_",j,"/chr_",i,"_chunk_",j,"_line_",line,"/SnpMatrix",iter,".txt"),header=F)
+a = 2-a
+for(k in 1:ncol(a)){
+  a[is.na(a[,k]), k] <- mean(a[,k], na.rm = TRUE)
+}
+
+a = cbind(1,a)
+
+write.table(a,file = paste0(path_cond,"/output/chr_",i,"_chunk_",j,"/chr_",i,"_chunk_",j,"_line_",line,"/covariate_iter",iter,".txt"), quote=F,col.names = F,row.names = F)
+
+
+=====================================================================================
+# check missing files due to crowded server 
+=====================================================================================
+
+ind_i = c()
+ind_j = c()
+ind_line = c()
+for(i in 1:850){
+	load(paste0("missing_chunk",i,".RData"))
+	ind_i = c(ind_i, missed_cpg_chr)
+	ind_j = c(ind_j, missed_cpg_chunk)
+	ind_line = c(ind_line, missed_cpg_line)
+
+}
+
+missing_dict = data.frame(ind_i, ind_j, ind_line)
+
+write.table(missing_dict, file = "missing_dict.txt", col.names=F,row.names=F, quote=F)
+
+```
+### collect results
+```R
+=====================================================================================
+# collect results
+=====================================================================================
+
+CpG_name_all = c()
+Indep_meQTL_num_all = c()
+chunk_num_record = c()
+chunk_missing = c()
+for(chunknum in 1:850){
+	print(chunknum)
+	fn=paste0("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/data/conditional/collect_result/re_AA_chunknum_",chunknum,".RData")
+	if(file.exists(fn)){
+		load(fn)
+		if(length(re_AA)>0){
+			CpG_name = c()
+			Indep_meQTL_num = c()
+			for(count in 1:length(re_AA)){
+				CpG_name[count] = re_AA[[count]]$cpg
+				Indep_meQTL_num[count] = re_AA[[count]]$indep_snp_num
+			}
+			CpG_name_all = c(CpG_name_all, CpG_name)
+			Indep_meQTL_num_all = c(Indep_meQTL_num_all, Indep_meQTL_num)
+			chunk_num_record = c(chunk_num_record, rep(chunknum,length(Indep_meQTL_num)))
+		}
+	}else{
+		chunk_missing = c(chunk_missing, chunknum)
+		print(paste0("missing ",chunknum ))
+	}
+}
+
+dat = data.frame(CpG_name_all,Indep_meQTL_num_all)
+dat1 = dat[which(dat$Indep_meQTL_num_all>1),]
+annodata_meCpG = annodata_meta[which(annodata_meta$significant==1),]
+annodata_meCpG$Indep_meQTL_num = 1
+annodata_meCpG$Indep_meQTL_num[match(dat1$CpG_name_all, annodata_meCpG$cpg)] = dat1$Indep_meQTL_num_all
+table(annodata_meCpG$Indep_meQTL_num)
+```
+
+### make figures
+```R
+=====================================================================================
+# Figures
+=====================================================================================
+library(ggplot2)
+setwd("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v3")
+pdf("Fig_hist_indep_meqtl.pdf",width=18, height=8)
+num = c( table((annodata_meCpG$Indep_meQTL_num)))
+num = c(num[-22],0,0,0,0,1)
+xaxis = c(1:26)
+dat = data.frame(xaxis, num)
+dat$xaxis = as.factor(dat$xaxis)
+ggplot(dat, aes(x=xaxis,y=num)) + 
+geom_bar(alpha=0.8, fill = "cornflowerblue",stat="identity", position=position_dodge()) + 
+geom_text(aes(label=num), vjust=-0.8, color="black",
+    position = position_dodge(0.9), size=6)+
+theme_bw(base_size = 22) + 
+ylim(0,210000)+
+labs(title="Conditional analysis",x="Number of independent meQTLs", y = "Number of meCpGs")
+dev.off()
+		
+#---------
+# density plot, dist to cpg starting site
+# table: 
+# col 1: meQTL
+# col 2: E1, E2, E3, >=E4
+# col 3: dist to cpg starting site
+#---------
+
+
+path_cond_res = "/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/data/conditional/collect_result"
+
+indep_num = c()
+dist_to_CpG = c()
+ind_snp_pos = c()
+for(chunknum in 1:850){
+	print(chunknum)
+	load(paste0(path_cond_res,"/re_AA_chunknum_",chunknum,".RData"))
+	if(length(re_AA)>0){
+		for(count in 1:length(re_AA)){
+			cpg_pos = annodata_meta[which(annodata_meta$cpg == re_AA[[count]]$cpg),]$start
+			ind_snp_pos = c(ind_snp_pos,re_AA[[count]]$E_pos)
+			dist_to_CpG = c(dist_to_CpG, abs(re_AA[[count]]$E_pos-cpg_pos))
+			indep_num = c(indep_num, 1:re_AA[[count]]$indep_snp_num)
+		}
+	}
+}
+
+
+
+meqtl_table_AA = data.frame(indep_num,dist_to_CpG)
+meqtl_table_AA$labelnew = meqtl_table_AA$indep_num
+meqtl_table_AA$labelnew = as.character(meqtl_table_AA$labelnew)
+meqtl_table_AA$labelnew[meqtl_table_AA$indep_num>=5] = ">=5"
+meqtl_table_AA$labelnew[meqtl_table_AA$indep_num>=10] = ">=10"
+meqtl_table_AA$labelnew[meqtl_table_AA$indep_num>=15] = ">=15"
+meqtl_table_AA$dist_to_CpG = meqtl_table_AA$dist_to_CpG/1000
+meqtl_table_AA$meQTL_order = factor(meqtl_table_AA$labelnew, levels=c("1","2","3","4",">=5",">=10",">=15"),order=T)
+library(dplyr)
+mu <- meqtl_table_AA %>% group_by(meQTL_order) %>% summarize(grp.median = median(dist_to_CpG))
+
+# > mu
+# # A tibble: 7 × 2
+#   meQTL_order grp.median
+#   <ord>            <dbl>
+# 1 1                 8.76
+# 2 2                13.4 
+# 3 3                15.6 
+# 4 4                16.8 
+# 5 >=5              17.8 
+# 6 >=10             18.3 
+# 7 >=15             18.7 
+
+pdf("Fig_density_meqtl.pdf",width=15, height=8)
+meqtl_table_AA2 = meqtl_table_AA[meqtl_table_AA$dist_to_CpG<=200,]
+ggplot(meqtl_table_AA2, aes(x = dist_to_CpG)) + 
+geom_density(aes(fill = meQTL_order), alpha = 0.4) + 
+geom_vline(data = mu, aes(xintercept = grp.median, color = meQTL_order), linetype = "dashed", size=2) + 
+labs(title="Independent meQTLs",x ="Distance to CpG site(kb)")+
+theme(legend.position="none")+
+theme_classic(base_size = 22) 
+dev.off()
+
+
+```
+
+### Heritability
+```R
+
+=====================================================================================
+# PVE for independent meQTLs
+=====================================================================================
+path_analysis="/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/analysis"
+load("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/analysis/bslmm_all_result.RData")
+bslmm_all_result$cpg = bslmm_all_result$cpgname
+# topcpg_pve = merge(topcpg, bslmm_all_result, by="cpg")
+# save(topcpg_pve, file = paste0(path_analysis,"/topcpg_pve.RData"))
+load(paste0(path_analysis,"/topcpg_pve.RData"))
+topcpg_pve_mQTL = topcpg_pve[which(topcpg_pve$significant==1),]
+# > topcpg_pve[1,]
+#          cpg        min_p min_p_id        rs       ps    af      beta    start
+# 1 cg00000029 0.0002194626      175 rs1074182 53471357 0.209 0.2099621 53468112
+#        end significant    cpgname       pve     pve_sd       pge    pge_sd
+# 1 53468113           1 cg00000029 0.1104639 0.07052984 0.2316997 0.2007839
+# > dim(topcpg_pve)
+# [1] 787650     15
+
+
+# annotate independent meQTLs
+annodata_meta_meCpG = annodata_meta[which(annodata_meta$significant==1),]
+
+Indep_meQTL = c()
+pve_primary = c()
+pve_indep = c()
+cpgname = c()
+index = 0
+for(chunknum in 1:850){
+	print(chunknum)
+	load(paste0(path_cond_res,"/re_AA_chunknum_",chunknum,".RData"))
+	if(length(re_AA)>0){
+		for(count in 1:length(re_AA)){
+			index = index + 1
+			cpgname[index] = re_AA[[count]]$cpg
+			Indep_meQTL[index] = re_AA[[count]]$indep_snp_num
+			pve_primary[index] = re_AA[[count]]$pve_primary
+			pve_indep[index] = re_AA[[count]]$pve_indep
+		}
+	}
+}
+
+ind_match = match( annodata_meta_meCpG$cpg,cpgname)
+
+annodata_meta_meCpG$CPG = cpgname[ind_match]
+annodata_meta_meCpG$Indep_meQTL = Indep_meQTL[ind_match]
+annodata_meta_meCpG$pve_primary = pve_primary[ind_match]
+annodata_meta_meCpG$pve_indep = pve_indep[ind_match]
+
+
+annodata_meta_meCpG$PVE = bslmm_all_result$pve[match(annodata_meta_meCpG$CPG, bslmm_all_result$cpgname)]
+annodata_meta_meCpG$PVE_cpg = bslmm_all_result$cpgname[match(annodata_meta_meCpG$CPG, bslmm_all_result$cpgname)]
+annodata_meta_meCpG$pve_sd = bslmm_all_result$pve_sd[match(annodata_meta_meCpG$CPG, bslmm_all_result$cpgname)]
+annodata_meta_meCpG$pge = bslmm_all_result$pge[match(annodata_meta_meCpG$CPG, bslmm_all_result$cpgname)]
+annodata_meta_meCpG$pge_sd = bslmm_all_result$pge_sd[match(annodata_meta_meCpG$CPG, bslmm_all_result$cpgname)]
+annodata_meta_meCpG$por_cis = annodata_meta_meCpG$PVE * annodata_meta_meCpG$pge
+annodata_meta_meCpG$por_trans = annodata_meta_meCpG$PVE * (1 - annodata_meta_meCpG$pge)
+
+save(annodata_meta_meCpG, file = "/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/annodata_meta_meCpG.RData")
+
+load("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/annodata_meta_meCpG.RData")
+
+###############################
+independent meQTLs vs cis-PVE
+# follow eQTL fig S6
+###############################
+
+fig_Indep_meQTL = factor(annodata_meta_meCpG$Indep_meQTL, levels=c(1:26),order=T)
+fig_Indep_meQTL = as.factor(fig_Indep_meQTL)
+fig_por_cis = annodata_meta_meCpG$por_cis
+dat = data.frame(fig_Indep_meQTL,fig_por_cis)
+pdf("Fig_conditional_num_independent_meQTL_vs_cispve.pdf",width=15, height=8)
+ggplot(dat, aes(x=fig_Indep_meQTL, y=fig_por_cis)) +
+    geom_boxplot(alpha=0.8, fill="cornflowerblue") +
+    #stat_summary(fun.y=mean, geom="point", shape=20, size=5, color="red", fill="red") +
+    theme(legend.position="none") +
+    theme_classic(base_size = 22)+
+    ylim(-0.1,1)+
+    scale_fill_brewer(palette="Set3")+
+    labs(title="Number of independent meQTLs vs cis-PVE",x="Number of independent meQTLs", y = "cis-PVE")
+dev.off()
+
+
+pve_ratio_primary_aa = annodata_meta_meCpG$pve_primary/annodata_meta_meCpG$por_cis
+pve_ratio_indep_aa = annodata_meta_meCpG$pve_indep/annodata_meta_meCpG$por_cis
+type_aa = c(rep("Primary meQTL", length(pve_ratio_primary_aa)), rep("All independent meQTLs", length(pve_ratio_indep_aa)))
+pve_ratio_aa = c(pve_ratio_primary_aa, pve_ratio_indep_aa)
+type = type_aa
+type = factor(type,levels = c("Primary meQTL","All independent meQTLs"),ordered = TRUE)
+pve_ratio = c(pve_ratio_aa)
+class = c(rep("African Amercan", length(type_aa)))
+dat = data.frame(type,pve_ratio,class)
+dat_use = dat[which(dat$pve_ratio<=1),]
+pdf(paste0("Fig_pve_primary_vs_all_indep.pdf"),width=10, height=10)
+ggplot(dat_use, aes(x = type, y = pve_ratio,fill=class)) +
+scale_y_continuous(name = "Proportion of cis-PVE explained",breaks = seq(0, 1, 0.1),limits=c(0, 1)) +
+geom_violin(trim = FALSE, alpha=0.5, scale = "width",show.legend = FALSE) +
+geom_boxplot( aes(x = type, y = pve_ratio,fill=class),width = 0.2,position=position_dodge(0.9)) +
+theme_bw(base_size = 30) +
+#theme(plot.title = element_text(size = 20,face = "bold"),text = element_text(size = 40),axis.title = element_text(face="bold"),axis.text.x=element_text(size = 30)) +
+#scale_fill_brewer(palette = "Accent")+
+theme(legend.position="bottom")
+dev.off()
+
+
+
+###############################
+#The proportion of cis-SNP heritability for methylation explained by identified 
+#primary meQTLs and indepdent meQTLs depends on the number of meQTLs identifed
+# follow eQTL fig S7
+###############################
+
+
+dat=data.frame("indep_snp"=as.factor(annodata_meta_meCpG$Indep_meQTL))
+dat$por_cispve_by_primary = annodata_meta_meCpG$pve_primary/annodata_meta_meCpG$por_cis
+dat$por_cispve_by_indep = annodata_meta_meCpG$pve_indep/annodata_meta_meCpG$por_cis
+
+dat_use = dat[which(dat$por_cispve_by_primary<=1),]
+
+pdf(paste0("Fig_cispve_AA_byprimary.pdf"),width=20, height=7)
+ggplot(dat_use, aes(x = indep_snp, y = por_cispve_by_primary)) +
+scale_y_continuous(name = "Proportion of cis-PVE explained",breaks = seq(0, 1, 0.1),limits=c(0, 1)) +
+geom_violin(trim = FALSE, alpha=0.5, scale = "width",show.legend = FALSE,fill="cornflowerblue",alpha=0.7) +
+geom_boxplot( aes(x = indep_snp, y = por_cispve_by_primary),width = 0.2,position=position_dodge(0.9),fill="plum2",alpha=0.7) +
+theme_bw(base_size = 30) +
+#theme(plot.title = element_text(size = 20,face = "bold"),text = element_text(size = 40),axis.title = element_text(face="bold"),axis.text.x=element_text(size = 30)) +
+scale_fill_brewer(palette="RdBu")+
+theme(legend.position="bottom")+
+labs(title="Proportion of cis-PVE explained by primary meQTLs",x = "Number of independent meQTLs", y = "Proportion of cis-PVE explained")
+dev.off()
+
+
+dat=data.frame("indep_snp"=as.factor(annodata_meta_meCpG$Indep_meQTL))
+dat$por_cispve_by_indep = annodata_meta_meCpG$pve_indep/annodata_meta_meCpG$por_cis
+dat_use = dat[which(dat$por_cispve_by_indep<=1),]
+pdf(paste0("Fig_cispve_AA_byindep.pdf"),width=20, height=7)
+ggplot(dat_use, aes(x = indep_snp, y = por_cispve_by_indep)) +
+scale_y_continuous(name = "Proportion of cis-PVE explained",breaks = seq(0, 1, 0.1),limits=c(0, 1)) +
+geom_violin(trim = FALSE, alpha=0.5, scale = "width",show.legend = FALSE,fill="cornflowerblue",alpha=0.7) +
+geom_boxplot( aes(x = indep_snp, y = por_cispve_by_indep),width = 0.2,position=position_dodge(0.9),fill="plum2",alpha=0.7) +
+theme_bw(base_size = 30) +
+#theme(plot.title = element_text(size = 20,face = "bold"),text = element_text(size = 40),axis.title = element_text(face="bold"),axis.text.x=element_text(size = 30)) +
+scale_fill_brewer(palette="RdBu")+
+theme(legend.position="bottom")+
+labs(title="Proportion of cis-PVE explained by independent meQTLs",x = "Number of independent eQTLs", y = "Proportion of cis-PVE explained")
+dev.off()
+
+```
+
+### Functional enrichment analysis
+```R
+###############################
+# enrichment link to independent meQTLs
+###############################
+
+
+testEnrichment = function(Goi, gsets, background,  mindiffexp=2) {
+  scores = do.call(rbind.data.frame, lapply(names(gsets), function(gsetid){
+    gset = gsets[[gsetid]]
+
+    # much faster than using table
+    tp = length(intersect(Goi, gset))
+    fn = length(Goi) - tp
+    fp = length(gset) - tp
+    tn = length(background) - tp - fp - fn
+
+    contingency_table = matrix(c(tp, fp, fn, tn), 2, 2)
+
+    if (contingency_table[1,1] < mindiffexp){
+      return(NULL)
+    }
+
+    fisher_result = stats::fisher.test(contingency_table, alternative="two.sided",conf.int = TRUE)
+    list(pval=fisher_result$p.value, odds=fisher_result$estimate, odds_conf_low = fisher_result$conf.int[1],odds_conf_high = fisher_result$conf.int[2],found=contingency_table[1,1], gsetid=gsetid)
+  }))
+  if (nrow(scores) > 0) {
+    scores$qval = stats::p.adjust(scores$pval, method="fdr")
+  }
+  scores
+}
+
+
+# meCPGs with only 1 meQTL is more conservative than meCPGs with more than 1 meQTLs
+annodata_meta$Indep_meQTL_num=NA
+annodata_meta$Indep_meQTL_num[match(annodata_meta_meCpG$cpg, annodata_meta$cpg)] = annodata_meta_meCpG$Indep_meQTL
+
+
+annodata_meta$refgene_group[which(is.na(annodata_meta$refgene_group))] = "Intergenic"
+Goi = as.character(annodata_meta$cpg)[which(annodata_meta$Indep_meQTL_num==1)]
+gsets = list("Island"= as.character(annodata_meta$cpg)[which(annodata_meta$Relation_to_Island=="Island")], 
+       "N_Shelf" = as.character(annodata_meta$cpg)[which(annodata_meta$Relation_to_Island=="N_Shelf")], 
+       "N_Shore" = as.character(annodata_meta$cpg)[which(annodata_meta$Relation_to_Island=="N_Shore")], 
+       "OpenSea" = as.character(annodata_meta$cpg)[which(annodata_meta$Relation_to_Island=="OpenSea")], 
+       "S_Shelf" = as.character(annodata_meta$cpg)[which(annodata_meta$Relation_to_Island=="S_Shelf")], 
+       "S_Shore" = as.character(annodata_meta$cpg)[which(annodata_meta$Relation_to_Island=="S_Shore")],
+       "OpenSea" = as.character(annodata_meta$cpg)[which(annodata_meta$Relation_to_Island=="OpenSea")],
+		"1stExon"= as.character(annodata_meta$cpg)[which(annodata_meta$refgene_group=="1stExon")], 
+       "3'UTR" = as.character(annodata_meta$cpg)[which(annodata_meta$refgene_group=="3'UTR")], 
+       "5'UTR" = as.character(annodata_meta$cpg)[which(annodata_meta$refgene_group=="5'UTR")], 
+       "Body" = as.character(annodata_meta$cpg)[which(annodata_meta$refgene_group=="Body")], 
+       "ExonBnd" = as.character(annodata_meta$cpg)[which(annodata_meta$refgene_group=="ExonBnd")], 
+       "TSS1500" = as.character(annodata_meta$cpg)[which(annodata_meta$refgene_group=="TSS1500")], 
+       "TSS200" = as.character(annodata_meta$cpg)[which(annodata_meta$refgene_group=="TSS200")],
+       "Intergenic" = as.character(annodata_meta$cpg)[which(annodata_meta$refgene_group=="Intergenic")])
+
+background = as.character(annodata_meta$cpg)
+res_fisher1 = testEnrichment(Goi, gsets, background)
+
+
+cbp1=c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7",
+  "#FFDB6D", "#C4961A", "#F4EDCA", "#D16103", "#C3D7A4", "#52854C", "#4E84C4", "#293352")
+res_fisher1$gsetid = factor(res_fisher1$gsetid, levels=c("Island","S_Shelf","N_Shelf","N_Shore","S_Shore","OpenSea",
+  "TSS200","1stExon","5'UTR","3'UTR","TSS1500","Body","Intergenic"),order=T)
+res_fisher1$l = res_fisher1$gsetid 
+pdf("Fig_independent_meQTL_is1_enrichment.pdf", width=8,height=5)
+ggplot(res_fisher1, aes(y= odds, x = l,color=l)) +
+geom_point(size=3) +
+geom_errorbar(aes(ymin=odds_conf_low, ymax=odds_conf_high), width=0.5,size=1) +
+#scale_y_log10(breaks=ticks, labels = ticks) +
+geom_hline(yintercept = 1, linetype=2) +
+coord_flip() +
+ylim(0.4,1.6)+
+labs(x="", y = "Odds Ratio") +
+theme_linedraw()+
+scale_color_manual(values = cbp1)+
+theme(plot.title = element_text(size = 15,  face = "bold"),
+              text = element_text(size = 15),
+              axis.title = element_text(),
+              axis.text.x=element_text(size = 15) ,
+              legend.position = "none",
+              plot.margin = margin(1, 1, 1, 1, "cm")) 
+dev.off()
+
+
+annodata_meta$refgene_group[which(is.na(annodata_meta$refgene_group))] = "Intergenic"
+Goi = as.character(annodata_meta$cpg)[which(annodata_meta$Indep_meQTL_num>1)]
+gsets = list("Island"= as.character(annodata_meta$cpg)[which(annodata_meta$Relation_to_Island=="Island")], 
+       "N_Shelf" = as.character(annodata_meta$cpg)[which(annodata_meta$Relation_to_Island=="N_Shelf")], 
+       "N_Shore" = as.character(annodata_meta$cpg)[which(annodata_meta$Relation_to_Island=="N_Shore")], 
+       "OpenSea" = as.character(annodata_meta$cpg)[which(annodata_meta$Relation_to_Island=="OpenSea")], 
+       "S_Shelf" = as.character(annodata_meta$cpg)[which(annodata_meta$Relation_to_Island=="S_Shelf")], 
+       "S_Shore" = as.character(annodata_meta$cpg)[which(annodata_meta$Relation_to_Island=="S_Shore")],
+       "OpenSea" = as.character(annodata_meta$cpg)[which(annodata_meta$Relation_to_Island=="OpenSea")],
+		"1stExon"= as.character(annodata_meta$cpg)[which(annodata_meta$refgene_group=="1stExon")], 
+       "3'UTR" = as.character(annodata_meta$cpg)[which(annodata_meta$refgene_group=="3'UTR")], 
+       "5'UTR" = as.character(annodata_meta$cpg)[which(annodata_meta$refgene_group=="5'UTR")], 
+       "Body" = as.character(annodata_meta$cpg)[which(annodata_meta$refgene_group=="Body")], 
+       "ExonBnd" = as.character(annodata_meta$cpg)[which(annodata_meta$refgene_group=="ExonBnd")], 
+       "TSS1500" = as.character(annodata_meta$cpg)[which(annodata_meta$refgene_group=="TSS1500")], 
+       "TSS200" = as.character(annodata_meta$cpg)[which(annodata_meta$refgene_group=="TSS200")],
+       "Intergenic" = as.character(annodata_meta$cpg)[which(annodata_meta$refgene_group=="Intergenic")])
+
+background = as.character(annodata_meta$cpg)
+res_fisher2 = testEnrichment(Goi, gsets, background)
+
+cbp1=c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7",
+  "#FFDB6D", "#C4961A", "#F4EDCA", "#D16103", "#C3D7A4", "#52854C", "#4E84C4", "#293352")
+res_fisher2$gsetid = factor(res_fisher2$gsetid, levels=c("Island","S_Shelf","N_Shelf","N_Shore","S_Shore","OpenSea",
+  "TSS200","1stExon","5'UTR","3'UTR","TSS1500","Body","Intergenic"),order=T)
+res_fisher2$l = res_fisher2$gsetid 
+pdf("Fig_independent_meQTL_greaterthan1_enrichment.pdf", width=8,height=5)
+ggplot(res_fisher2, aes(y= odds, x = l,color=l)) +
+geom_point(size=3) +
+geom_errorbar(aes(ymin=odds_conf_low, ymax=odds_conf_high), width=0.5,size=1) +
+#scale_y_log10(breaks=ticks, labels = ticks) +
+geom_hline(yintercept = 1, linetype=2) +
+coord_flip() +
+ylim(0.4,1.6)+
+labs(x="", y = "Odds Ratio") +
+theme_linedraw()+
+scale_color_manual(values = cbp1)+
+theme(plot.title = element_text(size = 15,  face = "bold"),
+              text = element_text(size = 15),
+              axis.title = element_text(),
+              axis.text.x=element_text(size = 15) ,
+              legend.position = "none",
+              plot.margin = margin(1, 1, 1, 1, "cm")) 
+dev.off()
+
+# check independent meQTL > or <= 5
+annodata_meta$refgene_group[which(is.na(annodata_meta$refgene_group))] = "Intergenic"
+Goi = as.character(annodata_meta$cpg)[which(annodata_meta$Indep_meQTL_num<=5)]
+gsets = list("Island"= as.character(annodata_meta$cpg)[which(annodata_meta$Relation_to_Island=="Island")], 
+       "N_Shelf" = as.character(annodata_meta$cpg)[which(annodata_meta$Relation_to_Island=="N_Shelf")], 
+       "N_Shore" = as.character(annodata_meta$cpg)[which(annodata_meta$Relation_to_Island=="N_Shore")], 
+       "OpenSea" = as.character(annodata_meta$cpg)[which(annodata_meta$Relation_to_Island=="OpenSea")], 
+       "S_Shelf" = as.character(annodata_meta$cpg)[which(annodata_meta$Relation_to_Island=="S_Shelf")], 
+       "S_Shore" = as.character(annodata_meta$cpg)[which(annodata_meta$Relation_to_Island=="S_Shore")],
+       "OpenSea" = as.character(annodata_meta$cpg)[which(annodata_meta$Relation_to_Island=="OpenSea")],
+		"1stExon"= as.character(annodata_meta$cpg)[which(annodata_meta$refgene_group=="1stExon")], 
+       "3'UTR" = as.character(annodata_meta$cpg)[which(annodata_meta$refgene_group=="3'UTR")], 
+       "5'UTR" = as.character(annodata_meta$cpg)[which(annodata_meta$refgene_group=="5'UTR")], 
+       "Body" = as.character(annodata_meta$cpg)[which(annodata_meta$refgene_group=="Body")], 
+       "ExonBnd" = as.character(annodata_meta$cpg)[which(annodata_meta$refgene_group=="ExonBnd")], 
+       "TSS1500" = as.character(annodata_meta$cpg)[which(annodata_meta$refgene_group=="TSS1500")], 
+       "TSS200" = as.character(annodata_meta$cpg)[which(annodata_meta$refgene_group=="TSS200")],
+       "Intergenic" = as.character(annodata_meta$cpg)[which(annodata_meta$refgene_group=="Intergenic")])
+
+##############################################
+# check number of independent meQTL vs meanBeta
+##############################################
+
+
+fig_Indep_meQTL = factor(annodata_meta_meCpG$Indep_meQTL, levels=c(1:26),order=T)
+fig_Indep_meQTL = as.factor(fig_Indep_meQTL)
+anno = data.frame("Indep_meQTL" = fig_Indep_meQTL)
+anno$meanBeta = annodata_meta_meCpG$meanBeta
+#mu <- anno %>% group_by(Indep_meQTL) %>% summarize(grp.median = median(meanBeta))
+
+
+pdf(paste0("Fig_inp_meQTL_vs_meanBeta.pdf"),width=20, height=7)
+ggplot(anno, aes(x = Indep_meQTL, y = meanBeta)) +
+#scale_y_continuous(name = "Mean beta values",breaks = seq(0, 1, 0.1),limits=c(0, 1)) +
+geom_violin(trim = FALSE, alpha=0.5, scale = "width",show.legend = FALSE,fill="cornflowerblue",alpha=0.7) +
+geom_boxplot( aes(x = Indep_meQTL, y = meanBeta),width = 0.2,position=position_dodge(0.9),fill="plum2",alpha=0.7) +
+theme_bw(base_size = 30) +
+#theme(plot.title = element_text(size = 20,face = "bold"),text = element_text(size = 40),axis.title = element_text(face="bold"),axis.text.x=element_text(size = 30)) +
+scale_fill_brewer(palette="RdBu")+
+theme(legend.position="bottom")+
+labs(title="Mean beta values by independent meQTLs",x = "Number of independent meQTLs", y = "Mean beta values")
+dev.off()
+
+
+##############################################
+#For shore and shelf
+#y: enrichment, 
+#x: number of independent meQTLs
+##############################################
+
+annodata_meta$Indep_meQTL_num[which(is.na(annodata_meta$Indep_meQTL_num))]=0
+
+ind_num_max = 10
+count_at_least = 100
+
+indep_num = c(0:ind_num_max)
+OR_Nshelf = OR_Nshelf_low = OR_Nshelf_high = rep(NA,length(indep_num))
+OR_Sshelf = OR_Sshelf_low = OR_Sshelf_high = rep(NA,length(indep_num))
+OR_NShore = OR_NShore_low = OR_NShore_high = rep(NA,length(indep_num))
+OR_SShore = OR_SShore_low = OR_SShore_high = rep(NA,length(indep_num))
+OR_shelf = OR_shelf_low = OR_shelf_high = rep(NA,length(indep_num))
+OR_Shore = OR_Shore_low = OR_Shore_high = rep(NA,length(indep_num))
+OR_island = OR_island_low = OR_island_high = rep(NA,length(indep_num))
+OR_OpenSea = OR_OpenSea_low = OR_OpenSea_high = rep(NA,length(indep_num))
+
+count = 0
+for(num in indep_num){
+	count =  count + 1
+	print(count)
+	Goi = as.character(annodata_meta$cpg)[which(annodata_meta$Indep_meQTL_num == num)]
+	gsets = list(
+		"Island"= as.character(annodata_meta$cpg)[which(annodata_meta$Relation_to_Island=="Island")], 
+		"OpenSea"= as.character(annodata_meta$cpg)[which(annodata_meta$Relation_to_Island=="OpenSea")], 
+	   # "1stExon"= as.character(annodata_meta$cpg)[which(annodata_meta$refgene_group=="1stExon")], 
+    #    "3'UTR" = as.character(annodata_meta$cpg)[which(annodata_meta$refgene_group=="3'UTR")], 
+    #    "5'UTR" = as.character(annodata_meta$cpg)[which(annodata_meta$refgene_group=="5'UTR")], 
+    #    "Body" = as.character(annodata_meta$cpg)[which(annodata_meta$refgene_group=="Body")], 
+    #    "ExonBnd" = as.character(annodata_meta$cpg)[which(annodata_meta$refgene_group=="ExonBnd")], 
+    #    "TSS1500" = as.character(annodata_meta$cpg)[which(annodata_meta$refgene_group=="TSS1500")], 
+    #    "TSS200" = as.character(annodata_meta$cpg)[which(annodata_meta$refgene_group=="TSS200")],
+    #    "Intergenic" = as.character(annodata_meta$cpg)[which(annodata_meta$refgene_group=="Intergenic")],
+		    "N_Shelf" = as.character(annodata_meta$cpg)[which(annodata_meta$Relation_to_Island=="N_Shelf")], 
+	       "S_Shelf" = as.character(annodata_meta$cpg)[which(annodata_meta$Relation_to_Island=="S_Shelf")], 
+	       "N_Shore" = as.character(annodata_meta$cpg)[which(annodata_meta$Relation_to_Island=="N_Shore")], 
+	       "S_Shore" = as.character(annodata_meta$cpg)[which(annodata_meta$Relation_to_Island=="S_Shore")],
+	       "Shelf" = as.character(annodata_meta$cpg)[which(annodata_meta$Relation_to_Island=="N_Shelf" | annodata_meta$Relation_to_Island=="S_Shelf")], 
+	       "Shore" = as.character(annodata_meta$cpg)[which(annodata_meta$Relation_to_Island=="N_Shore" | annodata_meta$Relation_to_Island=="S_Shore")]
+	        )
+	background = as.character(annodata_meta$cpg)
+	res_fisher3 = testEnrichment(Goi, gsets, background)
+	print(res_fisher3)
+
+ind=which(res_fisher3$gsetid == "Island")
+if(length(ind)>0){
+	if(res_fisher3$found[ind]>count_at_least){
+	OR_island[count] = res_fisher3$odds[ind]
+	OR_island_low[count] = res_fisher3$odds_conf_low[ind]
+	OR_island_high[count] = res_fisher3$odds_conf_high[ind]
+}
+}
+
+ind=which(res_fisher3$gsetid == "N_Shelf")
+if(length(ind)>0){
+	if(res_fisher3$found[ind]>count_at_least){
+	OR_Nshelf[count] = res_fisher3$odds[ind]
+	OR_Nshelf_low[count] = res_fisher3$odds_conf_low[ind]
+	OR_Nshelf_high[count] = res_fisher3$odds_conf_high[ind]
+}
+}
+
+
+ind=which(res_fisher3$gsetid == "N_Shelf")
+if(length(ind)>0){
+	if(res_fisher3$found[ind]>count_at_least){
+	OR_Nshelf[count] = res_fisher3$odds[ind]
+	OR_Nshelf_low[count] = res_fisher3$odds_conf_low[ind]
+	OR_Nshelf_high[count] = res_fisher3$odds_conf_high[ind]
+}
+}
+
+
+ind=which(res_fisher3$gsetid == "S_Shelf")
+if(length(ind)>0){
+	if(res_fisher3$found[ind]>count_at_least){
+	OR_Sshelf[count] = res_fisher3$odds[ind]
+	OR_Sshelf_low[count] = res_fisher3$odds_conf_low[ind]
+	OR_Sshelf_high[count] = res_fisher3$odds_conf_high[ind]
+ }}
+
+ind=which(res_fisher3$gsetid == "N_Shore")
+if(length(ind)>0){
+	if(res_fisher3$found[ind]>count_at_least){
+	OR_NShore[count] = res_fisher3$odds[ind]
+	OR_NShore_low[count] = res_fisher3$odds_conf_low[ind]
+	OR_NShore_high[count] = res_fisher3$odds_conf_high[ind]
+ }} 
+
+ind=which(res_fisher3$gsetid == "S_Shore")
+if(length(ind)>0){
+	if(res_fisher3$found[ind]>count_at_least){
+	OR_SShore[count] = res_fisher3$odds[ind]
+	OR_SShore_low[count] = res_fisher3$odds_conf_low[ind]
+	OR_SShore_high[count] = res_fisher3$odds_conf_high[ind]
+}}
+
+ind=which(res_fisher3$gsetid == "Shelf")
+if(length(ind)>0){
+	if(res_fisher3$found[ind]>count_at_least){
+	OR_shelf[count] = res_fisher3$odds[ind]
+	OR_shelf_low[count] = res_fisher3$odds_conf_low[ind]
+	OR_shelf_high[count] = res_fisher3$odds_conf_high[ind]
+}}
+
+ind=which(res_fisher3$gsetid == "Shore")
+if(length(ind)>0){
+	if(res_fisher3$found[ind]>count_at_least){
+	OR_Shore[count] = res_fisher3$odds[ind]
+	OR_Shore_low[count] = res_fisher3$odds_conf_low[ind]
+	OR_Shore_high[count] = res_fisher3$odds_conf_high[ind]
+}} 
+
+ind=which(res_fisher3$gsetid == "OpenSea")
+if(length(ind)>0){
+	if(res_fisher3$found[ind]>count_at_least){
+	OR_OpenSea[count] = res_fisher3$odds[ind]
+	OR_OpenSea_low[count] = res_fisher3$odds_conf_low[ind]
+	OR_OpenSea_high[count] = res_fisher3$odds_conf_high[ind]
+}} 
+
+}
+
+result= data.frame("indep_num"=c(0:ind_num_max),
+OR_island , OR_island_low , OR_island_high ,
+OR_Nshelf , OR_Nshelf_low , OR_Nshelf_high ,
+OR_Sshelf , OR_Sshelf_low , OR_Sshelf_high ,
+OR_NShore , OR_NShore_low , OR_NShore_high ,
+OR_SShore , OR_SShore_low , OR_SShore_high ,
+OR_shelf ,OR_shelf_low , OR_shelf_high ,
+OR_Shore ,OR_Shore_low , OR_Shore_high,
+OR_OpenSea, OR_OpenSea_low, OR_OpenSea_high )
+
+result$indep_num = factor(result$indep_num, levels=c(result$indep_num),order=T)
+
+figure_plot=function(OR, low, high,titlein){
+	# ggplot(result, aes(y= OR, x = indep_num,color=indep_num)) +
+	ggplot(result, aes(y= OR, x = indep_num)) +
+	geom_point(size=3,color="#56B4E9") +
+	geom_errorbar(aes(ymin=low, ymax=high), width=0.3,size=1,color="#56B4E9") +
+	geom_hline(yintercept = 1, linetype=2) +
+	# coord_flip() +
+	# ylim(0.4,1.6)+
+	labs(x="Number of independent meQTLs in CpG site", y = "Odds Ratio",title=titlein) +
+	theme_linedraw()+
+	# scale_color_manual(values = cbp1)+
+	# scale_color_brewer(palette="Dark2")+
+	# scale_color_manual(values = cbp1)+
+	theme(plot.title = element_text(size = 15,  face = "bold"),
+	      text = element_text(size = 15),
+	      axis.title = element_text(),
+	      axis.text.x=element_text(size = 15) ,
+	      legend.position = "none",
+	      plot.margin = margin(1, 1, 1, 1, "cm")) 
+}
+
+cbp1=c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7",
+  "#FFDB6D", "#C4961A", "#F4EDCA", "#D16103", "#C3D7A4", "#52854C", "#4E84C4", "#293352")
+
+pdf("Fig_independent_meQTL_vs_shelf_shore_enrichment.pdf", width=8,height=4)
+f1=figure_plot(OR_island,OR_island_low,OR_island_high,"CpG islands")
+print(f1)
+f1=figure_plot(OR_Nshelf,OR_Nshelf_low,OR_Nshelf_high,"North Shelf of CpG islands")
+print(f1)
+f1=figure_plot(OR_Sshelf,OR_Sshelf_low,OR_Sshelf_high,"South Shelf of CpG islands")
+print(f1)
+f1=figure_plot(OR_NShore,OR_NShore_low,OR_NShore_high,"North Shore of CpG islands")
+print(f1)
+f1=figure_plot(OR_SShore,OR_SShore_low,OR_SShore_high,"South Shore of CpG islands")
+print(f1)
+f1=figure_plot(OR_shelf,OR_shelf_low,OR_shelf_high,"Shelf of CpG islands")
+print(f1)
+f1=figure_plot(OR_Shore,OR_Shore_low,OR_Shore_high,"Shore of CpG islands")
+print(f1)
+f1=figure_plot(OR_OpenSea,OR_OpenSea_low,OR_OpenSea_high,"OpenSea")
+print(f1)
+dev.off()
+
+
+#-------------------------------------------------------
+# correlation between # indep meQTL and # meSNPs
+#-------------------------------------------------------
+pval_thr =  0.001241127
+
+annodata_meta_meCpG$SNPnum=NA
+annodata_meta_meCpG$meSNPnum = NA
+for(i in 1:22){
+	print(i)
+	load(paste0(path_analysis,"/dfcpg_chr_",i,".RData"))
+	tmp=table(dfcpg_chr$cpg)
+	cpgnames=names(tmp)
+	snpnum=c(tmp)
+	dat = data.frame(cpgnames, snpnum)
+	cpg_intersect = intersect(cpgnames, annodata_meta_meCpG$cpg)
+	dat_use = dat[match(cpg_intersect,dat$cpgnames),]
+	match_id=match(dat_use$cpgnames, annodata_meta_meCpG$cpg)
+	annodata_meta_meCpG$SNPnum[match_id]=dat_use$snpnum
+	dfcpg_chr_sig=dfcpg_chr[which(dfcpg_chr$significant==1),]
+	tmp=table(dfcpg_chr_sig$cpg)
+	cpgnames=names(tmp)
+	snpnum=c(tmp)
+	dat = data.frame(cpgnames, snpnum)
+	cpg_intersect = intersect(cpgnames, annodata_meta_meCpG$cpg)
+	dat_use = dat[match(cpg_intersect,dat$cpgnames),]
+	match_id=match(dat_use$cpgnames, annodata_meta_meCpG$cpg)
+	annodata_meta_meCpG$meSNPnum[match_id]=dat_use$snpnum
+
+}
+
+annodata_meta_meCpG$Indep_meQTL_num = annodata_meCpG$Indep_meQTL_num[match(annodata_meta_meCpG$cpg, annodata_meCpG$cpg)]
+save(annodata_meta_meCpG, file = "/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/annodata_meta_meCpG.RData")
+
+```
+
