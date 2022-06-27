@@ -2,15 +2,17 @@
 
 - [PVE analysis](#pve-analysis)
 	- [Histogram of PVE](#histogram-of-pve)
-	- [cis-PVE vs trans-PVE](cis-pve-vs-trans-pve)
-- [Location on mulan](#location-on-mulan)
-	- [Mouse OB ST](#mouse-ob-st)
-	- [Mouse OB visium](#mouse-ob-visium)
-	- [Mouse OB slideseqV2](#mouse-ob-slideseqV2)
-	- [TLS-RCC](#tls-rcc)
-	- [Breast cancer](#breast-cancer)
-	- [Lung cancer](#lung-cancer)
-
+	- [cisPVE vs transPVE](cispve-vs-transpve)
+- [Enrichment analysis](#enrichment-analysis)
+	- [enrichment of meQTL signals around CpG site](#enrichment-of-meqtl-signals-around-cpg-site)
+	- [functional enrichment](#functional-enrichmentm)
+- [Colocalization](#colocalization)
+	- [colocalized eQTL and meQTL pairs](#colocalized-eqtl-and-meqtl-pairs)
+	- [cisPVE vs transPVE](cispve-vs-transpve)
+- [Mediation analysis](#mediation-analysis)
+ 	- [SME and SEM](#sme-and-sem)
+ 	- [SEM and SME coMet examples](#sem-and-sme-comet-examples)
+- [Disruptive SNPs](#disruptive-snps)
 
 
 #### PVE analysis
@@ -37,7 +39,7 @@ ggplot(topcpg_pve_mQTL, aes(x=pve)) +
 dev.off()
 ```
 
-##### cis-PVE vs trans-PVE
+##### cisPVE vs transPVE
 ```R
 
 # cis-PVE vs trans-PVE
@@ -70,7 +72,10 @@ theme(plot.title = element_text(size = 40,face = "bold"),text = element_text(siz
 scale_fill_brewer(palette = "Accent")+
 theme(legend.position="bottom")
 dev.off()
+```
 
+##### enrichment of meQTL signals around CpG site
+```R
 
 # enrichment of meQTL signals around CpG site
 
@@ -110,11 +115,14 @@ a + geom_histogram(aes(y = ..density..),
    labs(title="+/- 50kb",x="Distance to CpG starting site (kb)", y = "Density")
 dev.off()
 
+
+```
+
+##### functional enrichment
+```R
 #---------------------------
 # functional enrichment
 #---------------------------
-
-
 
 testEnrichment = function(Goi, gsets, background,  mindiffexp=2) {
   scores = do.call(rbind.data.frame, lapply(names(gsets), function(gsetid){
@@ -246,7 +254,10 @@ theme(plot.title = element_text(size = 15,  face = "bold"),
               plot.margin = margin(1, 1, 1, 1, "cm")) 
 dev.off()
 
+```
 
+##### colocalized eQTL and meQTL pairs
+```R
 #---------------------------
 # for colocalized eQTL and meQTL pairs:
 # direction of association of eQTL and meQTL
@@ -290,8 +301,8 @@ correlations_pval = c()
 for(i in 1:dim(tmpp)[1]){
   print(i)
   gene = as.character(tmpp$gene_names[i])
-  if(length(which(genenames_4994 %in% gene))>0){
-  load(paste0(path_mediation,"/result/Gene_",which(genenames_4994 %in% gene),".RData"))
+  if(length(which(genenames %in% gene))>0){
+  load(paste0(path_mediation,"/result/Gene_",which(genenames %in% gene),".RData"))
   expr = res_expr[,1]
   if(length(which(colnames(res_CpG_mat) %in% as.character(tmpp$cpg_names[i]) ))>0){
   methy = res_CpG_mat[,which(colnames(res_CpG_mat) %in% as.character(tmpp$cpg_names[i]) )]
@@ -411,9 +422,9 @@ ggplot(data=dat, aes(x=PP4, y=Percent, fill=class)) +
 
 dev.off()
 
-//////////////////////
-///// correlaion 
-//////////////////////
+#-------------------------
+#  correlaion 
+#-------------------------
 
 # ---promoter
 
@@ -511,7 +522,12 @@ ggplot(data=dat, aes(x=PP4, y=Percent, fill=class)) +
               legend.position = "bottom") 
 
 dev.off()
+```
 
+#### Mediation analysis
+
+##### SME and SEM
+```R
 #------------------------------------
 # SME and SEM p value correlations 
 #------------------------------------
@@ -533,6 +549,10 @@ dev.off()
 cor.test(coloc_result_PP4$log10_SEM,coloc_result_PP4$log10_SME,method="spearman")$p.value
 cor.test(coloc_result_PP4$log10_SEM,coloc_result_PP4$log10_SME,method="spearman")$estimate
 
+```
+
+##### SEM and SME coMet examples
+```R
 #------------------------------------
 # SEM and SME examples
 #------------------------------------
@@ -569,18 +589,9 @@ for(chunk in 1:100){
 
 load("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/coloc/AA_full_result.RData")
 
-
 # all QTL version
 cpg_dat = df[which(as.character(df$cpg)==cpgCPG),]
 gene_dat = AA_full_result[which(AA_full_result$GENE == geneENSG),]
-
-# > gene_dat[302,]
-#         chr        rs        ps n_miss allele1 allele0    af      beta
-# 1192743   1 rs1775151 205745684      1       T       C 0.377 0.2270112
-#                 se   l_remle       p_wald            GENE
-# 1192743 0.04497418 0.1842419 5.287617e-07 ENSG00000117280
-
-
 p_vals = c(gene_dat$p_wald, cpg_dat$p_wald)
 positions = c(gene_dat$ps, cpg_dat$ps)
 types = c(rep("Gene-SNP",length(gene_dat$ps)),rep("CpG-SNP",length(cpg_dat$ps)))
@@ -592,23 +603,8 @@ data$positionsMB = data$positions/1000000
 data$l = data$types
 
 data = data[which(data$positions>=(snppos-50000) &  data$positions<=(snppos+50000)),]
-
 min(data$positions)
 max(data$positions)
-
-
-# ENSG00000117280:
-> min(data$positions)
-[1] 205695695
-> max(data$positions)
-[1] 205795281
-
-
-# pval_thr =  0.001241127
-
-# pval_thr = coloc_result_PP4$sobel_p_SME[which(coloc_result_PP4$sobel_q_SME==max(coloc_result_PP4$sobel_q_SME[which(coloc_result_PP4$sobel_q_SME<=0.05)]))]
-# > pval_thr
-# [1] 0.002763829
 genename = geneENSG
 ind = which(topeQTL_mQTL_anno$GENE == genename)
 TargetID = topeQTL_mQTL_anno$cpg[ind]
@@ -634,14 +630,11 @@ colnames(correlation) = TargetID
 write.table(correlation, paste0("correlation_",genename,".txt"), row.names=F,quote=F,sep = "\t")
 
 
----mulan
+# change to mulan server
 
 library(rtracklayer)
 library(coMET)
-
 genename = "ENSG00000117280"
-
-
 setwd("/net/mulan/home/shanglu/GENOA_mQTL/manuscript/v1/Figure5")
 
 extdata <- system.file("extdata", package="coMET",mustWork=TRUE) 
@@ -653,8 +646,6 @@ mycorrelation <- file.path( paste0("/net/mulan/home/shanglu/GENOA_mQTL/manuscrip
 chrom <- "chr1" 
 start <-  205695695
 end <- 205795281 
-
-
 gen <- "hg19" 
 strand <- "*"
 BROWSER.SESSION="UCSC"
@@ -694,9 +685,6 @@ comet(config.file=configfile,
 tracks.gviz=listgviz,verbose=FALSE, print.image=TRUE)
 dev.off()
 
-
-
-
 geneENSG = "ENSG00000117280"
 cpgCPG = "cg06442372"
 snpSNP = "rs1775151"
@@ -713,7 +701,11 @@ datt = merge(dat1,dat2,by="names")
 
 cor.test(datt[,2],datt[,3])
 
+```
 
+
+#### Disruptive SNPs
+```R
 #------------------------------------
 # Disruptive SNPs
 #------------------------------------
@@ -744,9 +736,6 @@ disrupted_pval[which(disrupted_pval==0)]=2.23e-324
 sum(disrupted_is==1)
 sum(disrupted_is==0)
 
-
-
-
 # proportion of disrupted CpGs to be meCPGs
 load("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v3/disrupted_cpg/anno_disrupt_CpG_meSNP_version.RData")
 length(unique(disrupted_cpg[disrupted_is==1]))
@@ -763,18 +752,6 @@ length(unique(SNPs_all[disrupted_is==1 & disrupted_significant==1]))
 [1] 18383
 > 18383/21545
 [1] 0.8532374
-
-# disrupted but not significant:
-summary(disrupted_pval[which(disrupted_is==1 & disrupted_significant==0)])
-summary(disrupted_pval[which(disrupted_is==1 & disrupted_significant==1)])
-> summary(disrupted_pval[which(disrupted_is==1 & disrupted_significant==0)])
-     Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
-0.0002275 0.0079570 0.0954118 0.2455413 0.4272044 0.9994601 
-> summary(disrupted_pval[which(disrupted_is==1 & disrupted_significant==1)])
-     Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
-0.000e+00 0.000e+00 0.000e+00 2.076e-06 0.000e+00 2.263e-04 
-
-
 
 Goi = as.character(disrupted_cpg[which(disrupted_is==1)])
 gsets = list("meSNP"= as.character(disrupted_cpg)[which(disrupted_significant==1)], 
@@ -810,8 +787,11 @@ theme(plot.title = element_text(size = 22,  face = "bold"),
               legend.position = "none",
               plot.margin = margin(1, 1, 1, 1, "cm")) 
 dev.off()
+```			
 
+##### functional enrichment of disrupted CpGs
 
+```R
 
 # functional enrichment
 annodata = annodata_meta
@@ -900,7 +880,10 @@ theme(plot.title = element_text(size = 22,  face = "bold"),
               legend.position = "none",
               plot.margin = margin(1, 1, 1, 1, "cm")) 
 dev.off()
+```
 
+##### disrupted TFBS
+```R
 #---------------
 # disrupted TFBS
 #---------------
@@ -920,7 +903,6 @@ motifmap = read.table("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQ
 [1] 3961042       3
 > length(unique(motifmap[,4]))
 [1] 607
-
 
 library(parallel)
 library(ggplot2)
