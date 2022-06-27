@@ -1,7 +1,7 @@
 ## Table of Contents
 - [Enrichment analysis](#enrichment-analysis)
 	- [Enrichment of meQTL signals around CpG site](#enrichment-of-meqtl-signals-around-cpg-site)
-	- [functional enrichment](#functional-enrichmentm)
+	- [Functional enrichment](#functional-enrichment)
 - [PVE analysis](#pve-analysis)
 	- [Histogram of PVE](#histogram-of-pve)
 	- [cisPVE vs transPVE](cispve-vs-transpve)
@@ -62,7 +62,7 @@ dev.off()
 
 ```
 
-##### functional enrichment
+##### Functional enrichment
 ```R
 #---------------------------
 # functional enrichment
@@ -259,8 +259,6 @@ scale_fill_brewer(palette = "Accent")+
 theme(legend.position="bottom")
 dev.off()
 ```
-
-
 
 #### Disruptive SNPs
 
