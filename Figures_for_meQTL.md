@@ -668,7 +668,7 @@ theme(plot.title = element_text(size = 22,  face = "bold"),
 dev.off()
 ```
 
-
+#### Colocalization
 
 ##### colocalized eQTL and meQTL pairs
 ```R
