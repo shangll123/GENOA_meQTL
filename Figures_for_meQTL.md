@@ -1,80 +1,24 @@
 ## Table of Contents
-
+- [Enrichment analysis](#enrichment-analysis)
+	- [Enrichment of meQTL signals around CpG site](#enrichment-of-meqtl-signals-around-cpg-site)
+	- [functional enrichment](#functional-enrichmentm)
 - [PVE analysis](#pve-analysis)
 	- [Histogram of PVE](#histogram-of-pve)
 	- [cisPVE vs transPVE](cispve-vs-transpve)
-- [Enrichment analysis](#enrichment-analysis)
-	- [enrichment of meQTL signals around CpG site](#enrichment-of-meqtl-signals-around-cpg-site)
-	- [functional enrichment](#functional-enrichmentm)
+- [Disruptive SNPs](#disruptive-snps)
+ 	- [Disrupted CpGs](#disrupted-cpgs)
+ 	- [functional enrichment of disrupted CpGs](#functional-enrichment-of-disrupted-cpgs)
+ 	- [Disrupted TFBS](#disrupted-tfbs)
 - [Colocalization](#colocalization)
 	- [colocalized eQTL and meQTL pairs](#colocalized-eqtl-and-meqtl-pairs)
 	- [cisPVE vs transPVE](cispve-vs-transpve)
 - [Mediation analysis](#mediation-analysis)
  	- [SME and SEM](#sme-and-sem)
  	- [SEM and SME coMet examples](#sem-and-sme-comet-examples)
-- [Disruptive SNPs](#disruptive-snps)
-
-
-#### PVE analysis
-
-##### Histogram of PVE
-```R
-
-# histogram of PVE
-pdf(paste0(path_figure,"/Histogram_pve.pdf"),width=8, height=8)
-ggplot(topcpg_pve, aes(x=pve)) +
-  geom_histogram(bins = 150,color="purple", fill="lightpurple")+
-  geom_vline(aes(xintercept=median(pve)),linetype="dashed")+ 
-  theme_minimal(base_size = 22)+
-  geom_density(alpha=0.6)
-dev.off()
-
-# histogram of PVE in significant cpgs
-pdf(paste0(path_figure,"/Histogram_pve_mCPG.pdf"),width=8, height=8)
-ggplot(topcpg_pve_mQTL, aes(x=pve)) +
-  geom_histogram(bins = 150,color="purple", fill="lightpurple")+
-  geom_vline(aes(xintercept=median(pve)),linetype="dashed")+ 
-  theme_minimal(base_size = 22)+
-  geom_density(alpha=0.6)
-dev.off()
-```
-
-##### cisPVE vs transPVE
-```R
-
-# cis-PVE vs trans-PVE
-
-library(ggplot2)
-
-topcpg_pve$por_cis_combined = topcpg_pve$pve * topcpg_pve$pge
-topcpg_pve$por_trans_combined = topcpg_pve$pve * (1 - topcpg_pve$pge)
-cis = c(topcpg_pve$por_cis_combined, topcpg_pve$por_cis_combined[topcpg_pve$significant==0],topcpg_pve$por_cis_combined[topcpg_pve$significant==1])
-trans = c(topcpg_pve$por_trans_combined, topcpg_pve$por_trans_combined[topcpg_pve$significant==0],topcpg_pve$por_trans_combined[topcpg_pve$significant==1])
-additive = c(topcpg_pve$pve, topcpg_pve$pve[topcpg_pve$significant==0],topcpg_pve$pve[topcpg_pve$significant==1])
-effect = c(cis, trans, additive)
-effect_type = c(rep("cis-PVE",length(cis)), rep("trans-PVE",length(trans)), rep("total PVE",length(additive)))
-effect_type <- factor(effect_type,levels = c('cis-PVE','trans-PVE','total PVE'),ordered = TRUE)
-tmp = c(rep("All cpg sites", length(topcpg_pve$por_cis_combined)), rep("non cis-mQTL cpgs", sum(topcpg_pve$significant==0)),rep("cis-mQTL cpgs", sum(topcpg_pve$significant==1)))
-effect_class = factor(rep(tmp, 3),levels = c('All cpg sites','non cis-mQTL cpgs','cis-mQTL cpgs'),ordered = TRUE)
-dat = data.frame(effect,effect_type,effect_class)
 
 
 
-pdf(paste0("PVE.pdf"),width=18, height=12)
-ggplot(dat, aes(x = effect_class, y = effect,fill = effect_type)) +
-scale_y_continuous(name = "Proportion of variance explained",breaks = seq(0, 1, 0.1),limits=c(0, 1)) +
-scale_x_discrete(name = "") + 
-geom_violin(trim = FALSE, alpha=0.5, scale = "width",show.legend = FALSE) + 
-geom_boxplot( aes(x = effect_class, y = effect,fill = effect_type),width = 0.2,position=position_dodge(0.9)) +
-ggtitle("African American") +
-theme_bw(base_size = 30) +
-theme(plot.title = element_text(size = 40,face = "bold"),text = element_text(size = 40),axis.title = element_text(face="bold"),axis.text.x=element_text(size = 30)) +
-scale_fill_brewer(palette = "Accent")+
-theme(legend.position="bottom")
-dev.off()
-```
-
-##### enrichment of meQTL signals around CpG site
+##### Enrichment of meQTL signals around CpG site
 ```R
 
 # enrichment of meQTL signals around CpG site
@@ -255,6 +199,478 @@ theme(plot.title = element_text(size = 15,  face = "bold"),
 dev.off()
 
 ```
+
+
+#### PVE analysis
+
+##### Histogram of PVE
+```R
+
+# histogram of PVE
+pdf(paste0(path_figure,"/Histogram_pve.pdf"),width=8, height=8)
+ggplot(topcpg_pve, aes(x=pve)) +
+  geom_histogram(bins = 150,color="purple", fill="lightpurple")+
+  geom_vline(aes(xintercept=median(pve)),linetype="dashed")+ 
+  theme_minimal(base_size = 22)+
+  geom_density(alpha=0.6)
+dev.off()
+
+# histogram of PVE in significant cpgs
+pdf(paste0(path_figure,"/Histogram_pve_mCPG.pdf"),width=8, height=8)
+ggplot(topcpg_pve_mQTL, aes(x=pve)) +
+  geom_histogram(bins = 150,color="purple", fill="lightpurple")+
+  geom_vline(aes(xintercept=median(pve)),linetype="dashed")+ 
+  theme_minimal(base_size = 22)+
+  geom_density(alpha=0.6)
+dev.off()
+```
+
+##### cisPVE vs transPVE
+```R
+
+# cis-PVE vs trans-PVE
+
+library(ggplot2)
+
+topcpg_pve$por_cis_combined = topcpg_pve$pve * topcpg_pve$pge
+topcpg_pve$por_trans_combined = topcpg_pve$pve * (1 - topcpg_pve$pge)
+cis = c(topcpg_pve$por_cis_combined, topcpg_pve$por_cis_combined[topcpg_pve$significant==0],topcpg_pve$por_cis_combined[topcpg_pve$significant==1])
+trans = c(topcpg_pve$por_trans_combined, topcpg_pve$por_trans_combined[topcpg_pve$significant==0],topcpg_pve$por_trans_combined[topcpg_pve$significant==1])
+additive = c(topcpg_pve$pve, topcpg_pve$pve[topcpg_pve$significant==0],topcpg_pve$pve[topcpg_pve$significant==1])
+effect = c(cis, trans, additive)
+effect_type = c(rep("cis-PVE",length(cis)), rep("trans-PVE",length(trans)), rep("total PVE",length(additive)))
+effect_type <- factor(effect_type,levels = c('cis-PVE','trans-PVE','total PVE'),ordered = TRUE)
+tmp = c(rep("All cpg sites", length(topcpg_pve$por_cis_combined)), rep("non cis-mQTL cpgs", sum(topcpg_pve$significant==0)),rep("cis-mQTL cpgs", sum(topcpg_pve$significant==1)))
+effect_class = factor(rep(tmp, 3),levels = c('All cpg sites','non cis-mQTL cpgs','cis-mQTL cpgs'),ordered = TRUE)
+dat = data.frame(effect,effect_type,effect_class)
+
+
+
+pdf(paste0("PVE.pdf"),width=18, height=12)
+ggplot(dat, aes(x = effect_class, y = effect,fill = effect_type)) +
+scale_y_continuous(name = "Proportion of variance explained",breaks = seq(0, 1, 0.1),limits=c(0, 1)) +
+scale_x_discrete(name = "") + 
+geom_violin(trim = FALSE, alpha=0.5, scale = "width",show.legend = FALSE) + 
+geom_boxplot( aes(x = effect_class, y = effect,fill = effect_type),width = 0.2,position=position_dodge(0.9)) +
+ggtitle("African American") +
+theme_bw(base_size = 30) +
+theme(plot.title = element_text(size = 40,face = "bold"),text = element_text(size = 40),axis.title = element_text(face="bold"),axis.text.x=element_text(size = 30)) +
+scale_fill_brewer(palette = "Accent")+
+theme(legend.position="bottom")
+dev.off()
+```
+
+
+
+#### Disruptive SNPs
+
+##### Disrupted CpGs
+
+```R
+#------------------------------------
+# Disruptive SNPs
+#------------------------------------
+
+# map to meSNP results
+disrupted_cpg = c()
+disrupted_significant = c()
+disrupted_is = c()
+disrupted_pval = c()
+for(chr in 1:22){
+
+    print(chr)
+
+    load(paste0(path_analysis,"/dfcpg_chr_",chr,".RData"))
+    dfcpg_chr$disrupted = rep(0,dim(dfcpg_chr)[1])
+    ind = which(dfcpg_chr$ps >= dfcpg_chr$cpgstart & dfcpg_chr$ps <= dfcpg_chr$cpgend )
+    dfcpg_chr$disrupted[ind]=1
+
+    disrupted_cpg = c(disrupted_cpg, dfcpg_chr$cpg)
+    disrupted_significant = c(disrupted_significant, dfcpg_chr$significant)
+    disrupted_is = c(disrupted_is, dfcpg_chr$disrupted)
+    disrupted_pval = c(disrupted_pval, dfcpg_chr$p_wald)
+
+}
+
+
+disrupted_pval[which(disrupted_pval==0)]=2.23e-324
+sum(disrupted_is==1)
+sum(disrupted_is==0)
+
+# proportion of disrupted CpGs to be meCPGs
+load("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v3/disrupted_cpg/anno_disrupt_CpG_meSNP_version.RData")
+length(unique(disrupted_cpg[disrupted_is==1]))
+[1] 21399
+length(unique(disrupted_cpg[disrupted_is==1 & disrupted_significant==1]))
+[1] 18303
+> 18303/21399
+[1] 0.8553203
+
+# proportion of disrupting SNPs to be meSNPs
+length(unique(SNPs_all[disrupted_is==1]))
+[1] 21545
+length(unique(SNPs_all[disrupted_is==1 & disrupted_significant==1]))
+[1] 18383
+> 18383/21545
+[1] 0.8532374
+
+Goi = as.character(disrupted_cpg[which(disrupted_is==1)])
+gsets = list("meSNP"= as.character(disrupted_cpg)[which(disrupted_significant==1)], 
+       "non meSNP" = as.character(disrupted_cpg)[which(disrupted_significant==0)])
+background = as.character(disrupted_cpg)
+res_fisher = testEnrichment(Goi, gsets, background)
+
+# > res_fisher
+#    pval       odds odds_conf_low odds_conf_high found    gsetid qval
+# 2     0 157.692393    148.549273     166.573196 20093     meSNP    0
+# 21    0   7.767561      6.819204       8.886893 21399 non meSNP    0
+
+cbp1=c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7",
+  "#FFDB6D", "#C4961A", "#F4EDCA", "#D16103", "#C3D7A4", "#52854C", "#4E84C4", "#293352")
+res_fisher$gsetid = factor(res_fisher$gsetid, levels=c("meSNP","non meSNP"),order=T)
+res_fisher$l = res_fisher$gsetid 
+
+pdf("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v3/disrupted_cpg/v3_disrupted_CpG_enrichment_meSNP.pdf", width=8,height=5)
+ggplot(res_fisher, aes(y= odds, x = l,color=l)) +
+geom_point(size=3) +
+geom_errorbar(aes(ymin=odds_conf_low, ymax=odds_conf_high), width=0.5,size=1) +
+#scale_y_log10(breaks=ticks, labels = ticks) +
+geom_hline(yintercept = 1, linetype=2) +
+coord_flip() +
+#ylim(0.5,2)+
+labs(x="", y = "Odds Ratio",title="Disrupted CpG sites") +
+theme_linedraw()+
+scale_color_manual(values = cbp1)+
+theme(plot.title = element_text(size = 22,  face = "bold"),
+              text = element_text(size = 22),
+              axis.title = element_text(),
+              axis.text.x=element_text(size = 22) ,
+              legend.position = "none",
+              plot.margin = margin(1, 1, 1, 1, "cm")) 
+dev.off()
+```			
+
+##### functional enrichment of disrupted CpGs
+```R
+
+# functional enrichment
+annodata = annodata_meta
+annodata$refgene_group[which(is.na(annodata$refgene_group))] = "Intergenic"
+Goi = as.character(disrupted_cpg[which(disrupted_is==1)])
+gsets = list("Island"= as.character(annodata$cpg)[which(annodata$Relation_to_Island=="Island")], 
+       "N_Shelf" = as.character(annodata$cpg)[which(annodata$Relation_to_Island=="N_Shelf")], 
+       "N_Shore" = as.character(annodata$cpg)[which(annodata$Relation_to_Island=="N_Shore")], 
+       "OpenSea" = as.character(annodata$cpg)[which(annodata$Relation_to_Island=="OpenSea")], 
+       "S_Shelf" = as.character(annodata$cpg)[which(annodata$Relation_to_Island=="S_Shelf")], 
+       "S_Shore" = as.character(annodata$cpg)[which(annodata$Relation_to_Island=="S_Shore")],
+       "OpenSea" = as.character(annodata$cpg)[which(annodata$Relation_to_Island=="OpenSea")])
+background = as.character(annodata$cpg)
+res_fisher1 = testEnrichment(Goi, gsets, background)
+> res_fisher1
+            pval      odds odds_conf_low odds_conf_high found  gsetid
+2   0.000000e+00 0.2522336     0.2377358      0.2674414  1202  Island
+21  2.281485e-07 1.1969968     1.1187954      1.2794797   938 N_Shelf
+3  1.653184e-120 0.5226879     0.4919026      0.5549838  1150 N_Shore
+4   0.000000e+00 2.3038436     2.2334909      2.3767376 16147 OpenSea
+5   4.256065e-07 1.1998075     1.1187682      1.2853850   874 S_Shelf
+6   1.307641e-97 0.5350299     0.5012934      0.5705031   995 S_Shore
+7   0.000000e+00 2.3038436     2.2334909      2.3767376 16147 OpenSea
+            qval
+2   0.000000e+00
+21  2.661732e-07
+3  2.893071e-120
+4   0.000000e+00
+5   4.256065e-07
+6   1.830698e-97
+7   0.000000e+00
+
+gsets = list("1stExon"= as.character(annodata$cpg)[which(annodata$refgene_group=="1stExon")], 
+       "3'UTR" = as.character(annodata$cpg)[which(annodata$refgene_group=="3'UTR")], 
+       "5'UTR" = as.character(annodata$cpg)[which(annodata$refgene_group=="5'UTR")], 
+       "Body" = as.character(annodata$cpg)[which(annodata$refgene_group=="Body")], 
+       "ExonBnd" = as.character(annodata$cpg)[which(annodata$refgene_group=="ExonBnd")], 
+       "TSS1500" = as.character(annodata$cpg)[which(annodata$refgene_group=="TSS1500")], 
+       "TSS200" = as.character(annodata$cpg)[which(annodata$refgene_group=="TSS200")],
+       "Intergenic" = as.character(annodata$cpg)[which(annodata$refgene_group=="Intergenic")])
+background = as.character(annodata$cpg)
+res_fisher2 = testEnrichment(Goi, gsets, background)
+> res_fisher2
+            pval      odds odds_conf_low odds_conf_high found     gsetid
+2   1.662065e-23 0.4659832     0.3903177      0.5522071   136    1stExon
+21  1.134537e-02 1.1244292     1.0259976      1.2299974   505      3'UTR
+3   6.039950e-14 0.8326701     0.7924466      0.8744402  1795      5'UTR
+4   7.402809e-23 1.1504669     1.1188101      1.1829578  8376       Body
+5  6.015077e-103 0.6105757     0.5817229      0.6405757  1869    TSS1500
+6  7.802848e-194 0.4058361     0.3785927      0.4345837   867     TSS200
+7  1.209008e-114 1.3954280     1.3564232      1.4354827  7758 Intergenic
+            qval
+2   2.908614e-23
+21  1.134537e-02
+3   7.046608e-14
+4   1.036393e-22
+5  1.403518e-102
+6  5.461994e-193
+7  4.231527e-114
+
+res_fisher = rbind(res_fisher1, res_fisher2)
+
+
+cbp1=c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7",
+  "#FFDB6D", "#C4961A", "#F4EDCA", "#D16103", "#C3D7A4", "#52854C", "#4E84C4", "#293352")
+res_fisher$gsetid = factor(res_fisher$gsetid, levels=c("Island","S_Shelf","N_Shelf","N_Shore","S_Shore","OpenSea",
+  "TSS200","1stExon","5'UTR","3'UTR","TSS1500","Body","Intergenic"),order=T)
+
+res_fisher$l = res_fisher$gsetid 
+
+pdf("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v3/disrupted_cpg/v3_disrupted_CpG_allpairs_functional_enrichment.pdf", width=8,height=5)
+ggplot(res_fisher, aes(y= odds, x = l,color=l)) +
+geom_point(size=3) +
+geom_errorbar(aes(ymin=odds_conf_low, ymax=odds_conf_high), width=0.5,size=1) +
+#scale_y_log10(breaks=ticks, labels = ticks) +
+geom_hline(yintercept = 1, linetype=2) +
+coord_flip() +
+#ylim(0.5,2)+
+labs(x="", y = "Odds Ratio",title="Disrupted CpG sites") +
+theme_linedraw()+
+scale_color_manual(values = cbp1)+
+theme(plot.title = element_text(size = 22,  face = "bold"),
+              text = element_text(size = 22),
+              axis.title = element_text(),
+              axis.text.x=element_text(size = 22) ,
+              legend.position = "none",
+              plot.margin = margin(1, 1, 1, 1, "cm")) 
+dev.off()
+```
+
+##### Disrupted TFBS
+```R
+#---------------
+# disrupted TFBS
+#---------------
+
+motifmap = read.table("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/TFBS/HUMAN_hg19_BBLS_1_00_FDR_0_10.bed",header = FALSE, sep="\t",stringsAsFactors=FALSE, quote="")
+> dim(motifmap)
+[1] 4474877       6
+> head(motifmap)
+     V1        V2        V3            V4       V5 V6
+1 chr17  58239126  58239144 LM1_RFX1=RFX1 1.763390  +
+2 chr17  58239126  58239144 LM1_RFX1=RFX1 1.763377  -
+3  chr7 128800229 128800247 LM1_RFX1=RFX1 1.815382  +
+4  chr7 128800229 128800247 LM1_RFX1=RFX1 1.815382  -
+5  chr1   6133012   6133030 LM1_RFX1=RFX1 1.650912  -
+6 chr12 104996389 104996407 LM1_RFX1=RFX1 1.247502  -
+> dim(unique(motifmap[,1:3]))
+[1] 3961042       3
+> length(unique(motifmap[,4]))
+[1] 607
+
+library(parallel)
+library(ggplot2)
+
+fx_motif = function(i,motifmap_chr_in){
+  ind_j = which(dfcpg_chr$ps>= motifmap_chr_in$V2[i]  & dfcpg_chr$ps<=motifmap_chr_in$V3[i]  )
+  if(length(ind_j!=0)){
+    return(list(ind_j,i))
+  }
+}
+
+# map to meSNP results
+# too large, need to get each chromosome seperately
+for(chr in 1:22){
+
+    print(chr)
+
+    load(paste0(path_analysis,"/dfcpg_chr_",chr,".RData"))
+    motifmap_chr = motifmap[which(as.character(motifmap$V1)==paste0("chr",chr)),]
+    dfcpg_chr$TF = rep(0,dim(dfcpg_chr)[1])
+
+    fx_motif = function(i,motifmap_chr_in){
+      ind_j = which(dfcpg_chr$ps>= motifmap_chr_in$V2[i]  & dfcpg_chr$ps<=motifmap_chr_in$V3[i]  )
+      if(length(ind_j!=0)){
+        return(list(ind_j,i))
+      }
+    }
+
+    motifmap_chr = unique(motifmap_chr[,1:4])
+
+
+    site_name = c()
+    for(k in 1:round(dim(motifmap_chr)[1]/1000+1)){
+        print(k/round(dim(motifmap_chr)[1]/1000+1))
+        if(k<dim(motifmap_chr)[1]/1000){
+          start = 1000*(k-1)+1
+          end = 1000*k
+        }else{
+          start = 1000*(k-1)+1
+          end = dim(motifmap_chr)[1]
+        }
+        results = mclapply(start:end, fx_motif, motifmap_chr_in=motifmap_chr, mc.cores = 20)
+        dfcpg_chr$TF[unlist(lapply(results, `[[`, 1))]=1
+        site_name = c(site_name,rownames(motifmap_chr)[unlist(lapply(results, `[[`, 2))])
+    }
+
+    motif_is = dfcpg_chr$TF
+    motif_cpg = dfcpg_chr$cpg
+    motif_significant = dfcpg_chr$significant
+    motif_pval = dfcpg_chr$p_wald
+    save(motif_cpg, motif_significant, motif_is, motif_pval,file = paste0("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v3/Motif/anno_disrupt_Motif_meSNP_chr_",chr,".RData"))
+
+}
+
+
+##########  too slow on local, submit jobs
+
+cd /home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v3/Motif
+for ((myline=1;myline<=22;myline++)); do
+qsub -cwd -N motif  -v FOO=$myline -l vf=5G  motif_run.sh
+done
+
+##########
+# collect results
+motif_is_all = c()
+motif_cpg_all = c()
+motif_significant_all = c()
+motif_pval_all = c()
+site_name_all = c()
+for(chr in 1:22){
+  print(chr)
+  load(paste0("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v3/Motif/anno_disrupt_Motif_meSNP_chr_",chr,".RData"))
+  motif_is_all = c(motif_is_all, motif_is)
+  motif_cpg_all = c(motif_cpg_all, motif_cpg)
+  motif_significant_all = c(motif_significant_all, motif_significant)
+  motif_pval_all = c(motif_pval_all, motif_pval)
+  site_name_all = c(site_name_all, site_name)
+}
+
+
+SNPs_all = c()
+for(chr in 1:22){
+    print(chr)
+    load(paste0(path_analysis,"/dfcpg_chr_",chr,".RData"))
+    SNPs_all = c(SNPs_all, dfcpg_chr$rs)
+}
+
+
+motif_pval_all[which(motif_pval_all==0)]=2.23e-308
+
+# mapped to  motif sites
+length(site_name_all)
+[1] 87077
+# SNPs disrupting motifs
+sum(motif_is_all==1)
+[1] 2386480
+sum(motif_is_all==0)
+[1] 239325283
+
+# for motif disrupting SNPs, see if p values are smaller than non disrupting ones
+dat = data.frame("minus_log10_pval"=-log10(motif_pval_all), "Disrupted" = as.character(motif_is_all))
+
+summary(dat$minus_log10_pval[which(dat$Disrupted==1)])
+# median 0.4600548
+summary(dat$minus_log10_pval[which(dat$Disrupted==0)])
+# median 0.4694
+
+# These SNPs could directly disrupt motif binding and are indeed enriched with meSNPs 
+# (OR= 1.802, p-value <2.23e-308) than in non-meSNPs (OR= 0.029, p-value<2.23e-308) 
+Goi = as.character(motif_cpg_all[which(motif_is_all==1)]) # CpG names
+gsets = list("meSNP"= as.character(motif_cpg_all)[which(motif_significant_all==1)], # CpG with SNP significant
+       "non meSNP" = as.character(motif_cpg_all)[which(motif_significant_all==0)])  # CpG with SNP non-significant
+background = as.character(motif_cpg_all)
+res_fisher = testEnrichment(Goi, gsets, background)
+
+> res_fisher
+   pval       odds odds_conf_low odds_conf_high  found    gsetid qval
+2     0 1.80210158     1.7952042     1.80896543 308887     meSNP    0
+21    0 0.02946881     0.0293082     0.02956757 668575 non meSNP    0
+
+
+cbp1=c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7",
+  "#FFDB6D", "#C4961A", "#F4EDCA", "#D16103", "#C3D7A4", "#52854C", "#4E84C4", "#293352")
+res_fisher$gsetid = factor(res_fisher$gsetid, levels=c("meSNP","non meSNP"),order=T)
+res_fisher$l = res_fisher$gsetid 
+
+pdf("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v3/Motif/v3_disrupted_Motif_enrichment_meSNP.pdf", width=8,height=5)
+ggplot(res_fisher, aes(y= odds, x = l,color=l)) +
+geom_point(size=3) +
+geom_errorbar(aes(ymin=odds_conf_low, ymax=odds_conf_high), width=0.5,size=1) +
+#scale_y_log10(breaks=ticks, labels = ticks) +
+geom_hline(yintercept = 1, linetype=2) +
+coord_flip() +
+#ylim(0.5,2)+
+labs(x="", y = "Odds Ratio",title="Disrupted Motif") +
+theme_linedraw()+
+scale_color_manual(values = cbp1)+
+theme(plot.title = element_text(size = 22,  face = "bold"),
+              text = element_text(size = 22),
+              axis.title = element_text(),
+              axis.text.x=element_text(size = 22) ,
+              legend.position = "none",
+              plot.margin = margin(1, 1, 1, 1, "cm")) 
+dev.off()
+
+# number of pairs, disrupted 
+disrupted_cpg = unique(motif_cpg_all[which(motif_is_all==1)])
+length(disrupted_cpg)
+[1] 668576
+# number of pairs, disrupted & significant:
+disrupted_meCpG = unique(motif_cpg_all[which(motif_significant_all==1 & motif_is_all==1)])
+length(disrupted_meCpG)
+[1] 103825
+
+
+# number of SNPs disrupting 
+disrupting_SNP = unique(SNPs_all[which(motif_is_all==1)])
+length(disrupting_SNP)
+[1] 78940
+# number of SNPs disrupting & significant
+disrupting_meSNP = unique(SNPs_all[which(motif_significant_all==1 & motif_is_all==1)])
+length(disrupting_meSNP)
+[1] 46384
+
+
+SNPs_all_unique = unique(SNPs_all)
+
+# test if meSNPs are enriched in SNPs that disrupting motifs
+Goi = unique(SNPs_all[which(motif_significant_all==1)])
+gsets = list("SNPs Disrupting Motifs"= unique(as.character(SNPs_all)[which(motif_is_all==1)]), 
+       "SNPs Not Disrupting Motifs" = unique(as.character(SNPs_all)[which(motif_is_all==0)])  )
+background = SNPs_all_unique
+res_fisher = testEnrichment(Goi, gsets, background)
+res_fisher
+> res_fisher
+        pval     odds odds_conf_low odds_conf_high   found         gsetid
+2  0.0000000 1.887737     1.8579628       1.918085   57861     disrupting
+21 0.3177117 1.009369     0.9909982       1.028025 3490015 non disrupting
+        qval
+2  0.0000000
+21 0.3177117
+
+cbp1=c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7",
+  "#FFDB6D", "#C4961A", "#F4EDCA", "#D16103", "#C3D7A4", "#52854C", "#4E84C4", "#293352")
+res_fisher$gsetid = factor(res_fisher$gsetid, levels=c("SNPs Disrupting Motifs","SNPs Not Disrupting Motifs"),order=T)
+res_fisher$l = res_fisher$gsetid 
+
+pdf("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v3/Motif/v3_meSNPs_enrich_in_SNPs_disrupting_Motifs.pdf", width=10,height=4)
+ggplot(res_fisher, aes(y= odds, x = l,color=l)) +
+geom_point(size=3) +
+geom_errorbar(aes(ymin=odds_conf_low, ymax=odds_conf_high), width=0.5,size=1) +
+#scale_y_log10(breaks=ticks, labels = ticks) +
+geom_hline(yintercept = 1, linetype=2) +
+coord_flip() +
+#ylim(0.5,2)+
+labs(x="", y = "Odds Ratio",title="meSNP enrichment") +
+theme_linedraw()+
+scale_color_manual(values = cbp1)+
+theme(plot.title = element_text(size = 22,  face = "bold"),
+              text = element_text(size = 22),
+              axis.title = element_text(),
+              axis.text.x=element_text(size = 22) ,
+              legend.position = "none",
+              plot.margin = margin(1, 1, 1, 1, "cm")) 
+dev.off()
+```
+
+
 
 ##### colocalized eQTL and meQTL pairs
 ```R
@@ -524,6 +940,7 @@ ggplot(data=dat, aes(x=PP4, y=Percent, fill=class)) +
 dev.off()
 ```
 
+
 #### Mediation analysis
 
 ##### SME and SEM
@@ -642,476 +1059,6 @@ configfile <- file.path( paste0("/net/mulan/home/shanglu/GENOA_mQTL/manuscript/v
 myinfofile <- file.path( paste0("/net/mulan/home/shanglu/GENOA_mQTL/manuscript/v1/Figure5/infotable_",genename,".txt") )
 mycorrelation <- file.path( paste0("/net/mulan/home/shanglu/GENOA_mQTL/manuscript/v1/Figure5/methylation_table_",genename,".txt"))
 
-# ENSG00000117280:
-chrom <- "chr1" 
-start <-  205695695
-end <- 205795281 
-gen <- "hg19" 
-strand <- "*"
-BROWSER.SESSION="UCSC"
-mySession <- browserSession(BROWSER.SESSION) 
-genome(mySession) <- gen
-genetrack <-genes_ENSEMBL(gen,chrom,start,end,showId=TRUE) 
-snptrack <- snpBiomart_ENSEMBL(gen,chrom, start, end,dataset="hsapiens_snp_som",showId=FALSE)
-cpgIstrack <- cpgIslands_UCSC(gen,chrom,start,end)
-# gwastrack <-GWAScatalog_UCSC(gen,chrom,start,end)
-
-listgviz <- list(genetrack,snptrack,cpgIstrack)
-
-pdf(paste0(genename,"_cpgIstrack.pdf"))
-comet(config.file=configfile, 
-	mydata.file=myinfofile,
-	mydata.type="file",
-	cormatrix.file=mycorrelation,
-	cormatrix.type="listfile",
-	#mydata.large.file=myexpressfile, 
-	#mydata.large.type="listfile",
-	fontsize.gviz =12,
-tracks.gviz=listgviz,verbose=FALSE, print.image=FALSE)
-dev.off()
-
-
-regulatorytrack = regulatoryFeaturesBiomart_ENSEMBL(gen,chrom,start,end)
-listgviz <- list(genetrack,regulatorytrack,cpgIstrack)
-pdf(paste0(genename,"_regulatorytrack.pdf"))
-comet(config.file=configfile, 
-	mydata.file=myinfofile,
-	mydata.type="file",
-	cormatrix.file=mycorrelation,
-	cormatrix.type="listfile",
-	#mydata.large.file=myexpressfile, 
-	#mydata.large.type="listfile",
-	fontsize.gviz =12,
-tracks.gviz=listgviz,verbose=FALSE, print.image=TRUE)
-dev.off()
-
-geneENSG = "ENSG00000117280"
-cpgCPG = "cg06442372"
-snpSNP = "rs1775151"
-path_phenotype = "/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/data/phenotype"
-load(paste0(path_phenotype,"/M_value_EPIC_962.RData"))
-load(paste0(path_phenotype,"/sample_meta.RData"))
-load("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_GE/preprocessing_zxu_March2017/Lulu_Mar2018/AJHG_revision/data/expr_AA_proteingene.RData")
-methy_col = M_value_EPIC[which(rownames(M_value_EPIC)=="cg06442372"),na.omit(match( sample_meta$Sample_name,colnames(M_value_EPIC)))]
-names = as.character(sample_meta$PIN)[match(sample_meta$Sample_name, names(methy_col))]
-dat1 = data.frame(names,methy_col)
-expr_col = expr_AA_proteingene[which(rownames(expr_AA_proteingene)=="ENSG00000117280"),]
-dat2 = data.frame("names"=colnames(expr_AA_proteingene),"expr_col"=unlist(expr_col))
-datt = merge(dat1,dat2,by="names")
-
-cor.test(datt[,2],datt[,3])
-
-```
-
-
-#### Disruptive SNPs
-```R
-#------------------------------------
-# Disruptive SNPs
-#------------------------------------
-
-# map to meSNP results
-disrupted_cpg = c()
-disrupted_significant = c()
-disrupted_is = c()
-disrupted_pval = c()
-for(chr in 1:22){
-
-    print(chr)
-
-    load(paste0(path_analysis,"/dfcpg_chr_",chr,".RData"))
-    dfcpg_chr$disrupted = rep(0,dim(dfcpg_chr)[1])
-    ind = which(dfcpg_chr$ps >= dfcpg_chr$cpgstart & dfcpg_chr$ps <= dfcpg_chr$cpgend )
-    dfcpg_chr$disrupted[ind]=1
-
-    disrupted_cpg = c(disrupted_cpg, dfcpg_chr$cpg)
-    disrupted_significant = c(disrupted_significant, dfcpg_chr$significant)
-    disrupted_is = c(disrupted_is, dfcpg_chr$disrupted)
-    disrupted_pval = c(disrupted_pval, dfcpg_chr$p_wald)
-
-}
-
-
-disrupted_pval[which(disrupted_pval==0)]=2.23e-324
-sum(disrupted_is==1)
-sum(disrupted_is==0)
-
-# proportion of disrupted CpGs to be meCPGs
-load("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v3/disrupted_cpg/anno_disrupt_CpG_meSNP_version.RData")
-length(unique(disrupted_cpg[disrupted_is==1]))
-[1] 21399
-length(unique(disrupted_cpg[disrupted_is==1 & disrupted_significant==1]))
-[1] 18303
-> 18303/21399
-[1] 0.8553203
-
-# proportion of disrupting SNPs to be meSNPs
-length(unique(SNPs_all[disrupted_is==1]))
-[1] 21545
-length(unique(SNPs_all[disrupted_is==1 & disrupted_significant==1]))
-[1] 18383
-> 18383/21545
-[1] 0.8532374
-
-Goi = as.character(disrupted_cpg[which(disrupted_is==1)])
-gsets = list("meSNP"= as.character(disrupted_cpg)[which(disrupted_significant==1)], 
-       "non meSNP" = as.character(disrupted_cpg)[which(disrupted_significant==0)])
-background = as.character(disrupted_cpg)
-res_fisher = testEnrichment(Goi, gsets, background)
-
-# > res_fisher
-#    pval       odds odds_conf_low odds_conf_high found    gsetid qval
-# 2     0 157.692393    148.549273     166.573196 20093     meSNP    0
-# 21    0   7.767561      6.819204       8.886893 21399 non meSNP    0
-
-cbp1=c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7",
-  "#FFDB6D", "#C4961A", "#F4EDCA", "#D16103", "#C3D7A4", "#52854C", "#4E84C4", "#293352")
-res_fisher$gsetid = factor(res_fisher$gsetid, levels=c("meSNP","non meSNP"),order=T)
-res_fisher$l = res_fisher$gsetid 
-
-pdf("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v3/disrupted_cpg/v3_disrupted_CpG_enrichment_meSNP.pdf", width=8,height=5)
-ggplot(res_fisher, aes(y= odds, x = l,color=l)) +
-geom_point(size=3) +
-geom_errorbar(aes(ymin=odds_conf_low, ymax=odds_conf_high), width=0.5,size=1) +
-#scale_y_log10(breaks=ticks, labels = ticks) +
-geom_hline(yintercept = 1, linetype=2) +
-coord_flip() +
-#ylim(0.5,2)+
-labs(x="", y = "Odds Ratio",title="Disrupted CpG sites") +
-theme_linedraw()+
-scale_color_manual(values = cbp1)+
-theme(plot.title = element_text(size = 22,  face = "bold"),
-              text = element_text(size = 22),
-              axis.title = element_text(),
-              axis.text.x=element_text(size = 22) ,
-              legend.position = "none",
-              plot.margin = margin(1, 1, 1, 1, "cm")) 
-dev.off()
-```			
-
-##### functional enrichment of disrupted CpGs
-
-```R
-
-# functional enrichment
-annodata = annodata_meta
-annodata$refgene_group[which(is.na(annodata$refgene_group))] = "Intergenic"
-Goi = as.character(disrupted_cpg[which(disrupted_is==1)])
-gsets = list("Island"= as.character(annodata$cpg)[which(annodata$Relation_to_Island=="Island")], 
-       "N_Shelf" = as.character(annodata$cpg)[which(annodata$Relation_to_Island=="N_Shelf")], 
-       "N_Shore" = as.character(annodata$cpg)[which(annodata$Relation_to_Island=="N_Shore")], 
-       "OpenSea" = as.character(annodata$cpg)[which(annodata$Relation_to_Island=="OpenSea")], 
-       "S_Shelf" = as.character(annodata$cpg)[which(annodata$Relation_to_Island=="S_Shelf")], 
-       "S_Shore" = as.character(annodata$cpg)[which(annodata$Relation_to_Island=="S_Shore")],
-       "OpenSea" = as.character(annodata$cpg)[which(annodata$Relation_to_Island=="OpenSea")])
-background = as.character(annodata$cpg)
-res_fisher1 = testEnrichment(Goi, gsets, background)
-> res_fisher1
-            pval      odds odds_conf_low odds_conf_high found  gsetid
-2   0.000000e+00 0.2522336     0.2377358      0.2674414  1202  Island
-21  2.281485e-07 1.1969968     1.1187954      1.2794797   938 N_Shelf
-3  1.653184e-120 0.5226879     0.4919026      0.5549838  1150 N_Shore
-4   0.000000e+00 2.3038436     2.2334909      2.3767376 16147 OpenSea
-5   4.256065e-07 1.1998075     1.1187682      1.2853850   874 S_Shelf
-6   1.307641e-97 0.5350299     0.5012934      0.5705031   995 S_Shore
-7   0.000000e+00 2.3038436     2.2334909      2.3767376 16147 OpenSea
-            qval
-2   0.000000e+00
-21  2.661732e-07
-3  2.893071e-120
-4   0.000000e+00
-5   4.256065e-07
-6   1.830698e-97
-7   0.000000e+00
-
-gsets = list("1stExon"= as.character(annodata$cpg)[which(annodata$refgene_group=="1stExon")], 
-       "3'UTR" = as.character(annodata$cpg)[which(annodata$refgene_group=="3'UTR")], 
-       "5'UTR" = as.character(annodata$cpg)[which(annodata$refgene_group=="5'UTR")], 
-       "Body" = as.character(annodata$cpg)[which(annodata$refgene_group=="Body")], 
-       "ExonBnd" = as.character(annodata$cpg)[which(annodata$refgene_group=="ExonBnd")], 
-       "TSS1500" = as.character(annodata$cpg)[which(annodata$refgene_group=="TSS1500")], 
-       "TSS200" = as.character(annodata$cpg)[which(annodata$refgene_group=="TSS200")],
-       "Intergenic" = as.character(annodata$cpg)[which(annodata$refgene_group=="Intergenic")])
-background = as.character(annodata$cpg)
-res_fisher2 = testEnrichment(Goi, gsets, background)
-> res_fisher2
-            pval      odds odds_conf_low odds_conf_high found     gsetid
-2   1.662065e-23 0.4659832     0.3903177      0.5522071   136    1stExon
-21  1.134537e-02 1.1244292     1.0259976      1.2299974   505      3'UTR
-3   6.039950e-14 0.8326701     0.7924466      0.8744402  1795      5'UTR
-4   7.402809e-23 1.1504669     1.1188101      1.1829578  8376       Body
-5  6.015077e-103 0.6105757     0.5817229      0.6405757  1869    TSS1500
-6  7.802848e-194 0.4058361     0.3785927      0.4345837   867     TSS200
-7  1.209008e-114 1.3954280     1.3564232      1.4354827  7758 Intergenic
-            qval
-2   2.908614e-23
-21  1.134537e-02
-3   7.046608e-14
-4   1.036393e-22
-5  1.403518e-102
-6  5.461994e-193
-7  4.231527e-114
-
-res_fisher = rbind(res_fisher1, res_fisher2)
-
-
-cbp1=c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7",
-  "#FFDB6D", "#C4961A", "#F4EDCA", "#D16103", "#C3D7A4", "#52854C", "#4E84C4", "#293352")
-res_fisher$gsetid = factor(res_fisher$gsetid, levels=c("Island","S_Shelf","N_Shelf","N_Shore","S_Shore","OpenSea",
-  "TSS200","1stExon","5'UTR","3'UTR","TSS1500","Body","Intergenic"),order=T)
-
-res_fisher$l = res_fisher$gsetid 
-
-pdf("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v3/disrupted_cpg/v3_disrupted_CpG_allpairs_functional_enrichment.pdf", width=8,height=5)
-ggplot(res_fisher, aes(y= odds, x = l,color=l)) +
-geom_point(size=3) +
-geom_errorbar(aes(ymin=odds_conf_low, ymax=odds_conf_high), width=0.5,size=1) +
-#scale_y_log10(breaks=ticks, labels = ticks) +
-geom_hline(yintercept = 1, linetype=2) +
-coord_flip() +
-#ylim(0.5,2)+
-labs(x="", y = "Odds Ratio",title="Disrupted CpG sites") +
-theme_linedraw()+
-scale_color_manual(values = cbp1)+
-theme(plot.title = element_text(size = 22,  face = "bold"),
-              text = element_text(size = 22),
-              axis.title = element_text(),
-              axis.text.x=element_text(size = 22) ,
-              legend.position = "none",
-              plot.margin = margin(1, 1, 1, 1, "cm")) 
-dev.off()
-```
-
-##### disrupted TFBS
-```R
-#---------------
-# disrupted TFBS
-#---------------
-
-motifmap = read.table("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/TFBS/HUMAN_hg19_BBLS_1_00_FDR_0_10.bed",header = FALSE, sep="\t",stringsAsFactors=FALSE, quote="")
-> dim(motifmap)
-[1] 4474877       6
-> head(motifmap)
-     V1        V2        V3            V4       V5 V6
-1 chr17  58239126  58239144 LM1_RFX1=RFX1 1.763390  +
-2 chr17  58239126  58239144 LM1_RFX1=RFX1 1.763377  -
-3  chr7 128800229 128800247 LM1_RFX1=RFX1 1.815382  +
-4  chr7 128800229 128800247 LM1_RFX1=RFX1 1.815382  -
-5  chr1   6133012   6133030 LM1_RFX1=RFX1 1.650912  -
-6 chr12 104996389 104996407 LM1_RFX1=RFX1 1.247502  -
-> dim(unique(motifmap[,1:3]))
-[1] 3961042       3
-> length(unique(motifmap[,4]))
-[1] 607
-
-library(parallel)
-library(ggplot2)
-
-fx_motif = function(i,motifmap_chr_in){
-  ind_j = which(dfcpg_chr$ps>= motifmap_chr_in$V2[i]  & dfcpg_chr$ps<=motifmap_chr_in$V3[i]  )
-  if(length(ind_j!=0)){
-    return(list(ind_j,i))
-  }
-}
-
-# map to meSNP results
-# too large, need to get each chromosome seperately
-for(chr in 1:22){
-
-    print(chr)
-
-    load(paste0(path_analysis,"/dfcpg_chr_",chr,".RData"))
-    motifmap_chr = motifmap[which(as.character(motifmap$V1)==paste0("chr",chr)),]
-    dfcpg_chr$TF = rep(0,dim(dfcpg_chr)[1])
-
-    fx_motif = function(i,motifmap_chr_in){
-      ind_j = which(dfcpg_chr$ps>= motifmap_chr_in$V2[i]  & dfcpg_chr$ps<=motifmap_chr_in$V3[i]  )
-      if(length(ind_j!=0)){
-        return(list(ind_j,i))
-      }
-    }
-
-    motifmap_chr = unique(motifmap_chr[,1:4])
-
-
-    site_name = c()
-    for(k in 1:round(dim(motifmap_chr)[1]/1000+1)){
-        print(k/round(dim(motifmap_chr)[1]/1000+1))
-        if(k<dim(motifmap_chr)[1]/1000){
-          start = 1000*(k-1)+1
-          end = 1000*k
-        }else{
-          start = 1000*(k-1)+1
-          end = dim(motifmap_chr)[1]
-        }
-        results = mclapply(start:end, fx_motif, motifmap_chr_in=motifmap_chr, mc.cores = 20)
-        dfcpg_chr$TF[unlist(lapply(results, `[[`, 1))]=1
-        site_name = c(site_name,rownames(motifmap_chr)[unlist(lapply(results, `[[`, 2))])
-    }
-
-    motif_is = dfcpg_chr$TF
-    motif_cpg = dfcpg_chr$cpg
-    motif_significant = dfcpg_chr$significant
-    motif_pval = dfcpg_chr$p_wald
-    save(motif_cpg, motif_significant, motif_is, motif_pval,file = paste0("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v3/Motif/anno_disrupt_Motif_meSNP_chr_",chr,".RData"))
-
-}
-
-
-##########  too slow on local, submit jobs
-
-cd /home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v3/Motif
-for ((myline=1;myline<=22;myline++)); do
-qsub -cwd -N motif  -v FOO=$myline -l vf=5G  motif_run.sh
-done
-
-##########
-# collect results
-motif_is_all = c()
-motif_cpg_all = c()
-motif_significant_all = c()
-motif_pval_all = c()
-site_name_all = c()
-for(chr in 1:22){
-  print(chr)
-  load(paste0("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v3/Motif/anno_disrupt_Motif_meSNP_chr_",chr,".RData"))
-  motif_is_all = c(motif_is_all, motif_is)
-  motif_cpg_all = c(motif_cpg_all, motif_cpg)
-  motif_significant_all = c(motif_significant_all, motif_significant)
-  motif_pval_all = c(motif_pval_all, motif_pval)
-  site_name_all = c(site_name_all, site_name)
-}
-
-
-SNPs_all = c()
-for(chr in 1:22){
-    print(chr)
-    load(paste0(path_analysis,"/dfcpg_chr_",chr,".RData"))
-    SNPs_all = c(SNPs_all, dfcpg_chr$rs)
-}
-
-
-motif_pval_all[which(motif_pval_all==0)]=2.23e-308
-
-# mapped to  motif sites
-length(site_name_all)
-[1] 87077
-# SNPs disrupting motifs
-sum(motif_is_all==1)
-[1] 2386480
-sum(motif_is_all==0)
-[1] 239325283
-
-# for motif disrupting SNPs, see if p values are smaller than non disrupting ones
-dat = data.frame("minus_log10_pval"=-log10(motif_pval_all), "Disrupted" = as.character(motif_is_all))
-
-summary(dat$minus_log10_pval[which(dat$Disrupted==1)])
-# median 0.4600548
-summary(dat$minus_log10_pval[which(dat$Disrupted==0)])
-# median 0.4694
-
-# These SNPs could directly disrupt motif binding and are indeed enriched with meSNPs 
-# (OR= 1.802, p-value <2.23e-308) than in non-meSNPs (OR= 0.029, p-value<2.23e-308) 
-Goi = as.character(motif_cpg_all[which(motif_is_all==1)]) # CpG names
-gsets = list("meSNP"= as.character(motif_cpg_all)[which(motif_significant_all==1)], # CpG with SNP significant
-       "non meSNP" = as.character(motif_cpg_all)[which(motif_significant_all==0)])  # CpG with SNP non-significant
-background = as.character(motif_cpg_all)
-res_fisher = testEnrichment(Goi, gsets, background)
-
-> res_fisher
-   pval       odds odds_conf_low odds_conf_high  found    gsetid qval
-2     0 1.80210158     1.7952042     1.80896543 308887     meSNP    0
-21    0 0.02946881     0.0293082     0.02956757 668575 non meSNP    0
-
-
-cbp1=c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7",
-  "#FFDB6D", "#C4961A", "#F4EDCA", "#D16103", "#C3D7A4", "#52854C", "#4E84C4", "#293352")
-res_fisher$gsetid = factor(res_fisher$gsetid, levels=c("meSNP","non meSNP"),order=T)
-res_fisher$l = res_fisher$gsetid 
-
-pdf("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v3/Motif/v3_disrupted_Motif_enrichment_meSNP.pdf", width=8,height=5)
-ggplot(res_fisher, aes(y= odds, x = l,color=l)) +
-geom_point(size=3) +
-geom_errorbar(aes(ymin=odds_conf_low, ymax=odds_conf_high), width=0.5,size=1) +
-#scale_y_log10(breaks=ticks, labels = ticks) +
-geom_hline(yintercept = 1, linetype=2) +
-coord_flip() +
-#ylim(0.5,2)+
-labs(x="", y = "Odds Ratio",title="Disrupted Motif") +
-theme_linedraw()+
-scale_color_manual(values = cbp1)+
-theme(plot.title = element_text(size = 22,  face = "bold"),
-              text = element_text(size = 22),
-              axis.title = element_text(),
-              axis.text.x=element_text(size = 22) ,
-              legend.position = "none",
-              plot.margin = margin(1, 1, 1, 1, "cm")) 
-dev.off()
-
-# number of pairs, disrupted 
-disrupted_cpg = unique(motif_cpg_all[which(motif_is_all==1)])
-length(disrupted_cpg)
-[1] 668576
-# number of pairs, disrupted & significant:
-disrupted_meCpG = unique(motif_cpg_all[which(motif_significant_all==1 & motif_is_all==1)])
-length(disrupted_meCpG)
-[1] 103825
-
-
-# number of SNPs disrupting 
-disrupting_SNP = unique(SNPs_all[which(motif_is_all==1)])
-length(disrupting_SNP)
-[1] 78940
-# number of SNPs disrupting & significant
-disrupting_meSNP = unique(SNPs_all[which(motif_significant_all==1 & motif_is_all==1)])
-length(disrupting_meSNP)
-[1] 46384
-
-
-SNPs_all_unique = unique(SNPs_all)
-
-
-# test if meSNPs are enriched in SNPs that disrupting motifs
-Goi = unique(SNPs_all[which(motif_significant_all==1)])
-gsets = list("SNPs Disrupting Motifs"= unique(as.character(SNPs_all)[which(motif_is_all==1)]), 
-       "SNPs Not Disrupting Motifs" = unique(as.character(SNPs_all)[which(motif_is_all==0)])  )
-background = SNPs_all_unique
-res_fisher = testEnrichment(Goi, gsets, background)
-res_fisher
-> res_fisher
-        pval     odds odds_conf_low odds_conf_high   found         gsetid
-2  0.0000000 1.887737     1.8579628       1.918085   57861     disrupting
-21 0.3177117 1.009369     0.9909982       1.028025 3490015 non disrupting
-        qval
-2  0.0000000
-21 0.3177117
-
-cbp1=c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7",
-  "#FFDB6D", "#C4961A", "#F4EDCA", "#D16103", "#C3D7A4", "#52854C", "#4E84C4", "#293352")
-res_fisher$gsetid = factor(res_fisher$gsetid, levels=c("SNPs Disrupting Motifs","SNPs Not Disrupting Motifs"),order=T)
-res_fisher$l = res_fisher$gsetid 
-
-pdf("/home/skardia_lab/clubhouse/research/projects/GENOA_AA_mQTL/lulu/manuscript/v3/Motif/v3_meSNPs_enrich_in_SNPs_disrupting_Motifs.pdf", width=10,height=4)
-ggplot(res_fisher, aes(y= odds, x = l,color=l)) +
-geom_point(size=3) +
-geom_errorbar(aes(ymin=odds_conf_low, ymax=odds_conf_high), width=0.5,size=1) +
-#scale_y_log10(breaks=ticks, labels = ticks) +
-geom_hline(yintercept = 1, linetype=2) +
-coord_flip() +
-#ylim(0.5,2)+
-labs(x="", y = "Odds Ratio",title="meSNP enrichment") +
-theme_linedraw()+
-scale_color_manual(values = cbp1)+
-theme(plot.title = element_text(size = 22,  face = "bold"),
-              text = element_text(size = 22),
-              axis.title = element_text(),
-              axis.text.x=element_text(size = 22) ,
-              legend.position = "none",
-              plot.margin = margin(1, 1, 1, 1, "cm")) 
-dev.off()
-
-
-
 #-----------------------------------
 # make coMet figures for SME and SEM
 #-----------------------------------
@@ -1171,8 +1118,6 @@ tracks.gviz=listgviz,verbose=FALSE, print.image=TRUE)
 dev.off()
 
 ```
-
-
 
 
 
