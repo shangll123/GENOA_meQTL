@@ -1,7 +1,10 @@
+## Table of Contents
+- [Compare with CBA and PB](#compare-with-cba-and-pb)
+- [compare with FHS](#compare-with-fhs)
+- [compare with BEST](#compare-with-best)
 
 
-
-
+#### Compare with CBA and PB
 ```R
 #----------
 # compare with CBA and PB
@@ -66,6 +69,10 @@ for(chr in 1:22){
     }
   }
 }
+```
+
+#### compare with FHS
+```R
 
 #---------------------
 # compare with FHS
@@ -105,8 +112,11 @@ sum(common_pairs_num)
 sum(also_significant_num)
 sum(also_significant_num)/sum(common_pairs_num)
 sum(FHS_pairs_num_50kb)
+		
+```
 
-
+#### compare with BEST
+```R
 
 #---------------------
 # compare with BEST
