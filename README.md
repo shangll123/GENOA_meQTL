@@ -20,9 +20,9 @@ Data can also be obtained from the corresponding author on reasonable request.
 # Analysis codes
 | File name  | Usage |
 | ------------- | ------------- |
-|1.meQTL_mapping.md | for each CpG, we map SNPs within +/-50kb of the CpG site and extract the plink file for genotype  |
-|2.conditional_analysis.md | conditional analysis, efficient codes and scripts |
+|1.meQTL_mapping.md | For each CpG, we map SNPs within +/-50kb of the CpG site and extract the plink file for genotype  |
+|2.conditional_analysis.md | Conditional analysis, efficient codes and scripts |
 |3.meQTL_results_comparison.md|Compare results with previous studies|
 |4.colocalization.md | Codes for colocalization and molocalization|
 |5.mediation_analysis.md | Codes for mediation analysis|
-|6.Figures_for_meQTL.md| codes for figures in paper|
+|6.Figures_for_meQTL.md| Codes for figures in paper|
