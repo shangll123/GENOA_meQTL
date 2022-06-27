@@ -10,12 +10,6 @@ The SNP data is available from the Database of Genotypes and Phenotypes (dbGaP S
 
 Data can also be obtained from the corresponding author on reasonable request.
 
-1.meQTL_mapping.md
-2.conditional_analysis.md
-3.meQTL_results_comparison.md
-4.colocalization.md
-5.mediation_analysis.md
-6.Figures_for_meQTL.md
 
 # Analysis codes
 | File name  | Usage |
