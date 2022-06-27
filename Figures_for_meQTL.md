@@ -1,6 +1,21 @@
+## Table of Contents
+
+- [PVE analysis](#pve-analysis)
+	- [Histogram of PVE](#histogram-of-pve)
+	- [cis-PVE vs trans-PVE](cis-pve-vs-trans-pve)
+- [Location on mulan](#location-on-mulan)
+	- [Mouse OB ST](#mouse-ob-st)
+	- [Mouse OB visium](#mouse-ob-visium)
+	- [Mouse OB slideseqV2](#mouse-ob-slideseqV2)
+	- [TLS-RCC](#tls-rcc)
+	- [Breast cancer](#breast-cancer)
+	- [Lung cancer](#lung-cancer)
 
 
 
+#### PVE analysis
+
+##### Histogram of PVE
 ```R
 
 # histogram of PVE
@@ -20,7 +35,10 @@ ggplot(topcpg_pve_mQTL, aes(x=pve)) +
   theme_minimal(base_size = 22)+
   geom_density(alpha=0.6)
 dev.off()
+```
 
+##### cis-PVE vs trans-PVE
+```R
 
 # cis-PVE vs trans-PVE
 
