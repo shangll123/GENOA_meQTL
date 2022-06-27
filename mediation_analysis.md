@@ -1,0 +1,438 @@
+
+ ```R
+ #-------------------------
+# mediation proportion
+#-------------------------
+
+
+library(mediation)
+
+
+# SME_beta_cpg = c()
+# SME_se_cpg = c()
+# SME_p_cpg = c()
+# SME_beta_snp = c()
+# SME_se_snp = c()
+# SME_p_snp = c()
+# SME_beta_mqtl = c()
+# SME_se_mqtl = c()
+# SME_beta_mqtl_dat = c()
+# SME_se_mqtl_dat = c()
+# SME beta
+
+Prop_each_SME = c()
+Prop_each_SME_pval = c()
+SME_table = list()
+mediation_each_SME = list()
+for(i in 1:dim(coloc_result_PP4)[1]){
+  print(i)
+
+  gene = as.character(coloc_result_PP4$gene_names[i])
+  load(paste0(path_mediation,"/result/Gene_",which(genenames %in% gene),".RData"))
+  dat=coloc_dat
+  cpgnames = colnames(res_CpG_mat)
+  genename = colnames(res_expr)
+  cpgname=as.character(coloc_result_PP4$cpg_names[i])
+  snp = colnames(res_SNP)
+  expr = res_expr[,1]
+  methy = res_CpG_mat[,which(colnames(res_CpG_mat) %in% cpgname )]
+  geno = res_SNP[,1]
+  # res1 = lm(expr ~  methy+  geno)  # mediation is methy, y ~ SNP + mediator 
+
+datt = data.frame(methy, geno, expr)
+colnames(datt)[2] = "geno"
+colnames(datt)[3] = "expr"
+b <- lm(methy ~ geno, data=datt)
+c <- lm(expr ~ methy + geno, data=datt)
+
+# Estimation via quasi-Bayesian approximation
+contcont <- mediate(b, c, sims=50, treat="geno", mediator="methy")
+mediation_each_SME[[i]] = summary(contcont)
+Prop_each_SME[i] = mediation_each_SME[[i]]$n1
+Prop_each_SME_pval[i] = mediation_each_SME[[i]]$n1.p
+
+}
+
+Prop_each_SME = c()
+Prop_each_SME_pval = c()
+SME_table = list()
+mediation_each_SME = list()
+for(i in 1:dim(coloc_result_PP4)[1]){
+  print(i)
+
+  gene = as.character(coloc_result_PP4$gene_names[i])
+  load(paste0(path_mediation,"/result/Gene_",which(genenames %in% gene),".RData"))
+  dat=coloc_dat
+  cpgnames = colnames(res_CpG_mat)
+  genename = colnames(res_expr)
+  cpgname=as.character(coloc_result_PP4$cpg_names[i])
+  snp = colnames(res_SNP)
+  expr = res_expr[,1]
+  methy = res_CpG_mat[,which(colnames(res_CpG_mat) %in% cpgname )]
+  geno = res_SNP[,1]
+  # res1 = lm(expr ~  methy+  geno)  # mediation is methy, y ~ SNP + mediator 
+
+datt = data.frame(methy, geno, expr)
+colnames(datt)[2] = "geno"
+colnames(datt)[3] = "expr"
+b <- lm(methy ~ geno, data=datt)
+c <- lm(expr ~ methy + geno, data=datt)
+
+# Estimation via quasi-Bayesian approximation
+contcont <- mediate(b, c, sims=50, treat="geno", mediator="methy")
+mediation_each_SME[[i]] = summary(contcont)
+Prop_each_SME[i] = mediation_each_SME[[i]]$n1
+Prop_each_SME_pval[i] = mediation_each_SME[[i]]$n1.p
+
+}
+
+
+Prop_each_SEM = c()
+Prop_each_SEM_pval = c()
+mediation_each_SEM = list()
+for(i in 1:dim(coloc_result_PP4)[1]){
+  print(i)
+
+  gene = as.character(coloc_result_PP4$gene_names[i])
+  load(paste0(path_mediation,"/result/Gene_",which(genenames %in% gene),".RData"))
+  dat=coloc_dat
+  cpgnames = colnames(res_CpG_mat)
+  genename = colnames(res_expr)
+  cpgname=as.character(coloc_result_PP4$cpg_names[i])
+  snp = colnames(res_SNP)
+  expr = res_expr[,1]
+  methy = res_CpG_mat[,which(colnames(res_CpG_mat) %in% cpgname )]
+  geno = res_SNP[,1]
+
+datt = data.frame(methy, geno, expr)
+colnames(datt)[2] = "geno"
+colnames(datt)[3] = "expr"
+b <- lm(expr ~ geno, data=datt)
+c <- lm(methy ~ expr + geno, data=datt)
+
+# Estimation via quasi-Bayesian approximation
+contcont <- mediate(b, c, sims=50, treat="geno", mediator="expr")
+mediation_each_SEM[[i]] = summary(contcont)
+Prop_each_SEM[i] = mediation_each_SEM[[i]]$n1
+Prop_each_SEM_pval[i] = mediation_each_SEM[[i]]$n1.p
+
+}
+
+
+# significant mediation proportion from mediation package
+coloc_result_PP4$Prop_each_SME = Prop_each_SME
+coloc_result_PP4$Prop_each_SME_pval = Prop_each_SME_pval
+coloc_result_PP4$Prop_each_SEM = Prop_each_SEM
+coloc_result_PP4$Prop_each_SEM_pval = Prop_each_SEM_pval
+
+
+#------------
+# SEM
+#------------
+
+library(bda)
+
+# SEM beta
+coloc_result_PP4_sobel = coloc_result_PP4
+sobel_SEM_table = list()
+sobel_p_SEM = c()
+sobel_p_SME = c()
+for(i in 1:dim(coloc_result_PP4)[1]){
+  print(i)
+
+  gene = as.character(coloc_result_PP4$gene_names[i])
+  load(paste0(path_mediation,"/result/Gene_",which(genenames %in% gene),".RData"))
+  dat=coloc_dat
+  cpgnames = colnames(res_CpG_mat)
+  genename = colnames(res_expr)
+  cpgname=as.character(coloc_result_PP4$cpg_names[i])
+  snp = colnames(res_SNP)
+  expr = res_expr[,1]
+  methy = res_CpG_mat[,which(colnames(res_CpG_mat) %in% cpgname )]
+  geno = res_SNP[,1]
+  sobel_p_SEM[i] = mediation.test(expr,geno,methy)[2,1]
+  sobel_p_SME[i] = mediation.test(methy,geno,expr)[2,1]
+}
+
+coloc_result_PP4_sobel$sobel_p_SEM = sobel_p_SEM
+coloc_result_PP4_sobel$sobel_p_SME = sobel_p_SME
+
+
+library(fdrtool)
+
+pp.hat.comp = sobel_p_SEM
+pp.hat.comp[pp.hat.comp > 1] <- 1
+fdr.hat.comp<-fdrtool(pp.hat.comp, statistic="pvalue")
+summary(pp.hat.comp)
+sum(pp.hat.comp<0.05)
+summary(fdr.hat.comp$qval)
+table(fdr.hat.comp$qval<0.05)
+
+# > table(fdr.hat.comp$qval<0.05)
+# FALSE  TRUE 
+#  2183    93 
+
+coloc_result_PP4_sobel$sobel_q_SEM = fdr.hat.comp$qval
+
+pp.hat.comp = sobel_p_SME
+pp.hat.comp[pp.hat.comp > 1] <- 1
+fdr.hat.comp<-fdrtool(pp.hat.comp, statistic="pvalue")
+summary(pp.hat.comp)
+sum(pp.hat.comp<0.05)
+summary(fdr.hat.comp$qval)
+table(fdr.hat.comp$qval<0.05)
+# > table(fdr.hat.comp$qval<0.05)
+# FALSE  TRUE 
+#  2173   103 
+
+coloc_result_PP4_sobel$sobel_q_SME = fdr.hat.comp$qval
+
+
+coloc_result_PP4$sobel_p_SEM = sobel_p_SEM
+coloc_result_PP4$sobel_p_SME = sobel_p_SME
+pp.hat.comp.plot1 = coloc_result_PP4$sobel_p_SEM
+pp.hat.comp.plot2 = coloc_result_PP4$sobel_p_SME
+
+my.pvalue.list<-list( "Sobel SEM"= pp.hat.comp.plot1,"Sobel SME"= pp.hat.comp.plot2)
+pdf(paste0("Sobel_SME_and_SEM.pdf") ,width = 6, height = 6)
+qqunif.plot(my.pvalue.list, auto.key=list(corner=c(.95,.05)))
+dev.off()
+
+
+coloc_result_PP4$sobel_q_SME = coloc_result_PP4_sobel$sobel_q_SME
+coloc_result_PP4$sobel_q_SEM = coloc_result_PP4_sobel$sobel_q_SEM
+sobel_SME = (coloc_result_PP4$sobel_q_SME<0.05)*1
+sobel_SEM = (coloc_result_PP4$sobel_q_SEM<0.05)*1
+table(sobel_SME, sobel_SEM)
+
+# > table(sobel_SME, sobel_SEM)
+#          sobel_SEM
+# sobel_SME    0    1
+#         0 2166    7
+#         1   17   86
+
+
+
+
+#-----------
+# SME all proportion
+#-----------
+library(ggplot2)
+
+pdf(paste0("SME_hist_Mediation_indirect_effect_proportion_all.pdf"),width=10, height=6)
+ggplot(coloc_result_PP4, aes(x=Prop_each_SME)) +
+  #geom_histogram(bins = 100,color="black",fill = "yellow",alpha=0.5)+
+  geom_histogram(bins = 100,color="grey50",fill = "#F0E442",alpha=0.5)+
+  #geom_vline(aes(xintercept=0.02855),linetype="dashed",color="red")+ 
+  geom_vline(aes(xintercept=median(Prop_each_SME)),color="red")+ 
+  geom_vline(aes(xintercept=0),color="blue")+ 
+  theme_bw(base_size = 22)+
+      xlim(-1.1,1.1)+
+  #geom_density(alpha=0.6)+
+  theme(legend.position = "bottom",
+      plot.title = element_text(size = 20,  face = "bold"),
+      axis.title = element_text(face="bold"),
+      text = element_text(size = 20)
+      ) +
+  labs(title=paste0("Mediation Proportion for SME"),x=paste0("Mediation Proportion"), y = "Count")
+dev.off()
+
+#-----------
+# SEM all proportion
+#-----------
+
+pdf(paste0("SEM_hist_Mediation_indirect_effect_proportion_all.pdf"),width=10, height=6)
+ggplot(coloc_result_PP4, aes(x=Prop_each_SEM)) +
+  #geom_histogram(bins = 100,color="black",fill = "yellow",alpha=0.5)+
+  geom_histogram(bins = 100,color="grey50",fill = "#F0E442",alpha=0.5)+
+  #geom_vline(aes(xintercept=0.02855),linetype="dashed",color="red")+ 
+  geom_vline(aes(xintercept=median(Prop_each_SEM)),color="red")+ 
+  geom_vline(aes(xintercept=0),color="blue")+ 
+  theme_bw(base_size = 22)+
+      xlim(-1.1,1.1)+
+  #geom_density(alpha=0.6)+
+  theme(legend.position = "bottom",
+      plot.title = element_text(size = 20,  face = "bold"),
+      axis.title = element_text(face="bold"),
+      text = element_text(size = 20)
+      ) +
+  labs(title=paste0("Mediation Proportion for SEM"),x=paste0("Mediation Proportion"), y = "Count")
+dev.off()
+
+#-----------
+# SME all proportion, xlim(-0.25,0.25)
+#-----------
+
+pdf(paste0("SME_hist_Mediation_indirect_effect_proportion_all_0.25range.pdf"),width=10, height=6)
+ggplot(coloc_result_PP4, aes(x=Prop_each_SME)) +
+  #geom_histogram(bins = 100,color="black",fill = "yellow",alpha=0.5)+
+  geom_histogram(bins = 100,color="grey50",fill = "#F0E442",alpha=0.5)+
+  #geom_vline(aes(xintercept=0.02855),linetype="dashed",color="red")+ 
+  geom_vline(aes(xintercept=median(Prop_each_SME)),color="red")+ 
+  geom_vline(aes(xintercept=0),color="blue")+ 
+  theme_bw(base_size = 22)+
+      xlim(-0.25,0.25)+
+  #geom_density(alpha=0.6)+
+  theme(legend.position = "bottom",
+      plot.title = element_text(size = 20,  face = "bold"),
+      axis.title = element_text(face="bold"),
+      text = element_text(size = 20)
+      ) +
+  labs(title=paste0("Mediation Proportion for SME"),x=paste0("Mediation Proportion"), y = "Count")
+dev.off()
+
+#-----------
+# SEM all proportion, xlim(-0.25,0.25)
+#-----------
+
+pdf(paste0("SEM_hist_Mediation_indirect_effect_proportion_all0.25range.pdf"),width=10, height=6)
+ggplot(coloc_result_PP4, aes(x=Prop_each_SEM)) +
+  #geom_histogram(bins = 100,color="black",fill = "yellow",alpha=0.5)+
+  geom_histogram(bins = 100,color="grey50",fill = "#F0E442",alpha=0.5)+
+  #geom_vline(aes(xintercept=0.02855),linetype="dashed",color="red")+ 
+  geom_vline(aes(xintercept=median(Prop_each_SEM)),color="red")+ 
+  geom_vline(aes(xintercept=0),color="blue")+ 
+  theme_bw(base_size = 22)+
+      xlim(-0.25,0.25)+
+  #geom_density(alpha=0.6)+
+  theme(legend.position = "bottom",
+      plot.title = element_text(size = 20,  face = "bold"),
+      axis.title = element_text(face="bold"),
+      text = element_text(size = 20)
+      ) +
+  labs(title=paste0("Mediation Proportion for SEM"),x=paste0("Mediation Proportion"), y = "Count")
+dev.off()
+
+#-----------
+# SEM sobel proportion
+#-----------
+
+
+coloc_result_PP4_sig = coloc_result_PP4[which(coloc_result_PP4$sobel_q_SEM<0.05),]
+summary(coloc_result_PP4_sig$Prop_each_SEM)
+# > summary(coloc_result_PP4_sig$Prop_each_SEM)
+#     Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+# -0.30572  0.08976  0.14107  0.16408  0.20676  0.56670 
+
+pdf(paste0("SEM_hist_Mediation_indirect_effect_proportion_sig_sobel.pdf"),width=6, height=6)
+ggplot(coloc_result_PP4_sig, aes(x=Prop_each_SEM)) +
+  #geom_histogram(bins = 100,color="black",fill = "yellow",alpha=0.5)+
+  geom_histogram(bins = 15,color="grey50",fill = "#F0E442",alpha=0.5)+
+  #geom_vline(aes(xintercept=0.02855),linetype="dashed",color="red")+ 
+  geom_vline(aes(xintercept=median(coloc_result_PP4_sig$Prop_each_SEM)),color="red")+ 
+  geom_vline(aes(xintercept=0),color="blue")+ 
+  theme_bw(base_size = 22)+
+    xlim(-1.1,1.1)+
+  #geom_density(alpha=0.6)+
+  theme(legend.position = "bottom",
+      plot.title = element_text(size = 20,  face = "bold"),
+      axis.title = element_text(face="bold"),
+      text = element_text(size = 20)
+      ) +
+  labs(title=paste0("Mediation Proportion for sobel SEM"),x=paste0("Mediation Proportion"), y = "Count")
+dev.off()
+
+
+coloc_result_PP4_sig = coloc_result_PP4[which(coloc_result_PP4$sobel_q_SME<0.05),]
+summary(coloc_result_PP4_sig$Prop_each_SME)
+# > summary(coloc_result_PP4_sig$Prop_each_SME)
+#    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+# -0.9810  0.1369  0.2316  0.2417  0.3450  1.0118 
+
+pdf(paste0("SME_hist_Mediation_indirect_effect_proportion_sig_sobel.pdf"),width=6, height=6)
+ggplot(coloc_result_PP4_sig, aes(x=Prop_each_SME)) +
+  #geom_histogram(bins = 100,color="black",fill = "yellow",alpha=0.5)+
+  geom_histogram(bins = 15,color="grey50",fill = "#F0E442",alpha=0.5)+
+  #geom_vline(aes(xintercept=0.02855),linetype="dashed",color="red")+ 
+  geom_vline(aes(xintercept=median(coloc_result_PP4_sig$Prop_each_SEM)),color="red")+ 
+  geom_vline(aes(xintercept=0),color="blue")+ 
+  theme_bw(base_size = 22)+
+    xlim(-1.1,1.1)+
+  #geom_density(alpha=0.6)+
+  theme(legend.position = "bottom",
+      plot.title = element_text(size = 20,  face = "bold"),
+      axis.title = element_text(face="bold"),
+      text = element_text(size = 20)
+      ) +
+  labs(title=paste0("Mediation Proportion, sobel SME"),x=paste0("Mediation Proportion"), y = "Count")
+dev.off()
+
+
+
+sum(coloc_result_PP4$sobel_q_SME <0.05 & coloc_result_PP4$Prop_each_SME>0)
+sum(coloc_result_PP4$sobel_q_SEM <0.05 & coloc_result_PP4$Prop_each_SEM>0)
+
+> 
+> sum(coloc_result_PP4$sobel_q_SME <0.05 & coloc_result_PP4$Prop_each_SME>0)
+[1] 95
+> sum(coloc_result_PP4$sobel_q_SEM <0.05 & coloc_result_PP4$Prop_each_SEM>0)
+[1] 89
+
+> max(coloc_result_PP4$sobel_p_SME[which(coloc_result_PP4$sobel_q_SME<0.05)])
+[1] 0.002763829
+max(coloc_result_PP4$sobel_p_SEM[which(coloc_result_PP4$sobel_q_SEM<0.05)])
+[1] 0.002451182
+
+# pairs showing mediation under both models
+
+length(which(coloc_result_PP4$sobel_q_SME <0.05 & coloc_result_PP4$sobel_q_SEM <0.05 & coloc_result_PP4$Prop_each_SME>0 & coloc_result_PP4$Prop_each_SEM>0))
+
+[1] 83
+
+
+length(intersect(which(coloc_result_PP4$sobel_q_SME <0.05 | coloc_result_PP4$sobel_q_SEM <0.05) ,which(coloc_result_PP4$Prop_each_SME>0 & coloc_result_PP4$Prop_each_SEM>0)))
+[1] 101
+
+
+save(coloc_result_PP4, file = "coloc_result_PP4.RData")
+
+
+
+
+pdf(paste0("Histogram_pvalues_sobel_SME.pdf"),width=8, height=8)
+ggplot(coloc_result_PP4, aes(x=sobel_p_SME)) +
+  geom_histogram(bins = 150,color="darkblue", fill="lightblue")+
+  theme_classic(base_size = 25)+
+  geom_density(alpha=0.6)+
+   labs(title=paste0("Sobel SME pvalues"),x=paste0("P values"), y = "Count")
+dev.off()
+
+
+pdf(paste0("Histogram_pvalues_sobel_SEM.pdf"),width=8, height=8)
+ggplot(coloc_result_PP4, aes(x=sobel_p_SEM)) +
+  geom_histogram(bins = 150,color="darkblue", fill="lightblue")+
+  theme_classic(base_size = 25)+
+  geom_density(alpha=0.6)+
+   labs(title=paste0("Sobel SEM pvalues"),x=paste0("P values"), y = "Count")
+dev.off()
+
+
+Sobel_p_SME = coloc_result_PP4$sobel_p_SME
+Sobel_p_SEM = coloc_result_PP4$sobel_p_SEM
+pvalue = c(-log10(Sobel_p_SME), log10(Sobel_p_SEM))
+Proportion_SME = coloc_result_PP4$Prop_each_SME
+Proportion_SEM = coloc_result_PP4$Prop_each_SEM
+proportion = c(Proportion_SME, Proportion_SEM)
+Type = c(rep("SME", length(Sobel_p_SME)), rep("SEM", length(Sobel_p_SEM)))
+data_flip = data.frame(pvalue, proportion, Type)
+
+pdf(paste0("Flip_plot.pdf"), width=6, height=8)
+ggplot(data_flip, aes(x=proportion, y=pvalue,group=Type)) +
+	geom_point(aes(color=Type),size=0.7)+
+  	scale_color_manual(values=c( '#4E84C4','#D16103'))+
+  	labs(title=paste0(""), x="Mediation proportion", y = "-log10(Sobel P)")+
+  	#theme_bw(base_size=22)+
+  	theme_linedraw()+
+  	geom_vline(aes(xintercept=0),color="#0072B2",linetype="dashed")+ 
+  	theme(plot.title = element_text(size = 22,  face = "bold"),
+              text = element_text(size = 22),
+              #axis.title = element_text(face="bold"),
+              axis.text.x=element_text(size = 22) ,
+              legend.position = "bottom") 
+dev.off()
+
+
+
+
+ 
+ ```
